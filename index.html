@@ -52,7 +52,7 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="openNotifications()" class="relative hidden" id="notifBtn">
+        <button onclick="openNotifications()" class="relative hidden" id="notifBtn" aria-label="الإشعارات" title="الإشعارات">
           <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-ugec-border text-slate-300 hover:text-white transition">
             <i class="fa-solid fa-bell"></i>
           </span>
@@ -498,6 +498,7 @@
         <div class="font-bold">الإشعارات</div>
         <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
       </div>
+      <div class="flex items-center justify-between gap-2 mb-3"><p id="notificationsStatus" class="text-xs text-slate-400" role="status"></p><button id="dismissAllNotificationsBtn" type="button" class="ugec-chip" onclick="dismissAllNotifications()">حذف كل الإشعارات</button></div>
       <div id="notificationsList" class="space-y-2 max-h-[60vh] overflow-auto"></div>
     </div>
   </div>
@@ -544,7 +545,7 @@
     </div>
   </div>
 
-  <div class="max-w-5xl mx-auto px-4 py-4 text-center space-y-2">
+  <div id="legacyBackupPanel" class="hidden max-w-5xl mx-auto px-4 py-4 text-center space-y-2">
     <button class="ugec-chip" onclick="exportLegacy()">تنزيل نسخة من بيانات المتصفح القديم</button>
     <p class="text-xs text-slate-400">النسخة القديمة قد تحتوي كلمات مرور. احتفظ بها خاصة ولا ترفعها إلى GitHub.</p>
   </div>

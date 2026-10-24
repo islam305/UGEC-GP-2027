@@ -12,6 +12,8 @@ const fields = {
 };
 let db, profile, user, busy = false, refreshing = false;
 let rows = new Map();
+let notificationStates = new Map();
+let notificationsReady = false;
 let state = emptyState();
 function $(id) { return document.getElementById(id); }
 function emptyState() { return {isMentor:false,currentUni:null,universities:[],sessions:[],inputs:[],tasks:[],submissions:[],notifications:[],global:{sessions:0,tasks:0,pending:0,progress:0}}; }
@@ -82,11 +84,13 @@ async function establish(account,expectedRole) {
   $('logoutBtn').classList.remove('hidden'); $('refreshBtn').classList.remove('hidden');
   $('activeRoleLabel').textContent=state.isMentor?'مشرف / المنسق':state.universities[0]?.name||'فريق الجامعة';
   $('mentorSettingsBtn').classList.toggle('hidden',!state.isMentor);
+  $('legacyBackupPanel').classList.toggle('hidden',!state.isMentor);
   $('tabReviewsBtn').classList.toggle('hidden',!state.isMentor);
   document.querySelectorAll('.mentor-action').forEach(b=>b.classList.toggle('hidden',!state.isMentor));
 }
 function resetAuth() {
-  user=null;profile=null;rows.clear();state=emptyState();closeModals();renderAll();
+  user=null;profile=null;rows.clear();notificationStates.clear();notificationsReady=false;state=emptyState();closeModals();renderAll();
+  $('legacyBackupPanel').classList.add('hidden');
   $('appShell').classList.add('hidden');$('authGate').classList.remove('hidden');
   ['logoutBtn','mentorSettingsBtn','refreshBtn','notifBtn'].forEach(id=>$(id).classList.add('hidden'));
   document.querySelectorAll('.mentor-action').forEach(b=>b.classList.add('hidden'));
@@ -111,7 +115,7 @@ async function reloadData() {
       if(row.kind==='settings') {if(row.id==='global') nextState.global={...nextState.global,...data};}
       else nextState[row.kind==='teams'?'universities':row.kind].push(data);
     }
-    rows=next;state=nextState;renderAll();
+    rows=next;state=nextState;await loadNotificationStates();renderAll();
     status('متصل • آخر تحديث '+new Date().toLocaleTimeString('ar-EG'));
   } finally {refreshing=false;}
 }
@@ -215,7 +219,7 @@ function deleteSession(id) {return removeRecord('sessions',id);}
 function deleteInput(id) {return removeRecord('inputs',id);}
 function deleteTask(id) {return removeRecord('tasks',id);}
 function exportLegacy() {
-  try {const raw=localStorage.getItem(STORAGE_KEY);if(!raw) throw Error('لا توجد بيانات قديمة في هذا المتصفح. افتح الموقع من المتصفح الذي استخدمته سابقًا.');JSON.parse(raw);downloadJSON(raw,'UGEC-private-legacy-backup.json');}
+  try {requireMentor();const raw=localStorage.getItem(STORAGE_KEY);if(!raw) throw Error('لا توجد بيانات قديمة في هذا المتصفح. افتح الموقع من المتصفح الذي استخدمته سابقًا.');JSON.parse(raw);downloadJSON(raw,'UGEC-private-legacy-backup.json');}
   catch(err) {showError(err);}
 }
 function downloadJSON(raw,name) {const url=URL.createObjectURL(new Blob([raw],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -309,7 +313,7 @@ function updateStats() {
     $('gs'+s).value=stats[s.toLowerCase()];
   });
 }
-function renderAll() {updateStats();renderDashboard();renderSessions();renderInputs();renderTasks();renderReviews();renderTeams();renderReport();}
+function renderAll() {updateNotificationIndicator();updateStats();renderDashboard();renderSessions();renderInputs();renderTasks();renderReviews();renderTeams();renderReport();}
 function showTaskResult(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;const modal=$('resultModal');const t=state.tasks.find(t=>t.id===s.taskId);$('resultContent').replaceChildren(card(t?.title||'نتيجة التسليم',['الإصدار: '+s.rev,'الحالة: '+statusText(s.status),'الدرجة: '+(s.score===''?'لم يقيّم':s.score+'/100'),legacyReferenceText(s),'ملاحظات رئيسية: '+(s.major||'-'),'ملاحظات فرعية: '+(s.minor||'-')],(s.storagePath||s.fileLink)?[button('تنزيل التسليم',()=>openFile(s,'fileLink'))]:[]));closeModals();modal.classList.remove('hidden');}
 function openGlobalSettings() {requireMentor();closeModals();updateStats();$('globalSettingsModal').classList.remove('hidden');}
 function openReview(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;closeModals();$('reviewSubId').value=id;$('reviewScore').value=s.score??'';$('reviewStatus').value=s.status;$('reviewMajor').value=s.major||'';$('reviewMinor').value=s.minor||'';$('reviewModal').classList.remove('hidden');}
@@ -420,9 +424,83 @@ window.addEventListener('offline',()=>status('الاتصال مقطوع. الب�
 window.addEventListener('online',()=>{if(profile)refreshData();});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initData);else initData();
 
-function openNotifications() {
-  closeModals();
-  const notices=[...rows.values()].filter(r=>['sessions','inputs','tasks','submissions'].includes(r.kind)).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)).slice(0,20);
-  list('notificationsList',notices,r=>card(r.data.title||'تحديث تسليم • '+(r.data.rev||''),[dateText(r.updated_at),r.kind==='submissions'?statusText(r.data.status):'تم تحديث بيانات المنصة']));
-  $('notificationsModal').classList.remove('hidden');
+function notificationId(row) {return row.kind+':'+row.id+':'+row.version;}
+function currentNotifications() {
+  return [...rows.values()].filter(r=>['sessions','inputs','tasks','submissions'].includes(r.kind))
+    .sort((a,b)=>b.updated_at.localeCompare(a.updated_at)||notificationId(a).localeCompare(notificationId(b)));
 }
+function visibleNotifications() {return currentNotifications().filter(r=>!notificationStates.get(notificationId(r))?.dismissed);}
+async function loadNotificationStates() {
+  notificationStates=new Map();notificationsReady=false;
+  if(!user) return;
+  try {
+    for(let from=0;;from+=1000) {
+      const {data,error}=await db.from('ugec_notification_states').select('notification_id,seen,dismissed')
+        .eq('user_id',user.id).order('notification_id').range(from,from+999);
+      if(error) throw error;
+      data.forEach(item=>notificationStates.set(item.notification_id,item));
+      if(data.length<1000) break;
+    }
+    notificationsReady=true;
+  } catch {
+    // Notifications setup must not block signing in or working on the platform.
+    notificationStates.clear();
+  }
+}
+function updateNotificationIndicator() {
+  const unread=visibleNotifications().filter(r=>!notificationStates.get(notificationId(r))?.seen).length;
+  $('notifDot').classList.toggle('hidden',!user||unread===0);
+  $('notifBtn').setAttribute('aria-label',unread?'الإشعارات: '+unread+' غير مقروءة':'الإشعارات');
+  $('notifBtn').title=unread?'لديك '+unread+' إشعار غير مقروء':'الإشعارات';
+}
+function renderNotifications() {
+  const notices=visibleNotifications();
+  const target=$('notificationsList');target.replaceChildren();
+  notices.forEach(r=>target.append(card(r.data.title||'تحديث تسليم • '+(r.data.rev||''),
+    [dateText(r.updated_at),r.kind==='submissions'?statusText(r.data.status):'تم تحديث بيانات المنصة'],
+    [button('حذف الإشعار',()=>dismissNotification(notificationId(r)))])));
+  if(!notices.length)target.append(node('p','لا توجد إشعارات.','text-sm text-slate-400'));
+  $('dismissAllNotificationsBtn').disabled=!notificationsReady||!notices.length;
+  $('notificationsStatus').textContent=notificationsReady?'الحذف يخص حسابك فقط.':'يلزم تنفيذ ملف notifications-setup.sql لتفعيل حفظ القراءة والحذف.';
+  updateNotificationIndicator();
+}
+function requireNotificationsReady() {
+  if(!user) throw Error('سجّل الدخول أولًا.');
+  if(!notificationsReady) throw Error('نفّذ notifications-setup.sql مرة واحدة في Supabase، ثم حدّث بيانات المنصة.');
+}
+async function persistNotificationChanges(ids,dismissed=false) {
+  requireNotificationsReady();
+  for(let i=0;i<ids.length;i+=100) {
+    const batch=ids.slice(i,i+100);
+    if(dismissed) {
+      const {error}=await db.from('ugec_notification_states').upsert(batch.map(id=>({user_id:user.id,notification_id:id,seen:true,dismissed:true})),{onConflict:'user_id,notification_id'});
+      if(error) throw error;
+    } else {
+      // Preserve any dismissal already saved from another device.
+      let result=await db.from('ugec_notification_states').upsert(batch.map(id=>({user_id:user.id,notification_id:id,seen:true,dismissed:false})),{onConflict:'user_id,notification_id',ignoreDuplicates:true});
+      if(result.error) throw result.error;
+      result=await db.from('ugec_notification_states').update({seen:true}).eq('user_id',user.id).in('notification_id',batch);
+      if(result.error) throw result.error;
+    }
+  }
+  await loadNotificationStates();
+  if(!notificationsReady) throw Error('تم إرسال التغييرات لكن تعذر تأكيدها. حدّث البيانات وحاول مجددًا.');
+}
+function openNotifications() {
+  if(!user) return;
+  closeModals();renderNotifications();$('notificationsModal').classList.remove('hidden');
+  if(!notificationsReady) return;
+  const unread=visibleNotifications().filter(r=>!notificationStates.get(notificationId(r))?.seen).map(notificationId);
+  if(unread.length) return run(async()=>{await persistNotificationChanges(unread);renderNotifications();});
+}
+function dismissNotification(id) {return run(async()=>{
+  requireNotificationsReady();
+  if(!visibleNotifications().some(r=>notificationId(r)===id)) return;
+  await persistNotificationChanges([id],true);renderNotifications();
+});}
+function dismissAllNotifications() {return run(async()=>{
+  requireNotificationsReady();
+  const ids=visibleNotifications().map(notificationId);
+  if(!ids.length || !confirm('حذف كل الإشعارات الحالية من حسابك فقط؟')) return;
+  await persistNotificationChanges(ids,true);renderNotifications();
+});}
