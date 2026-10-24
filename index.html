@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="3.png">
+  <link rel="shortcut icon" type="image/png" href="3.png">
+  <title>UGEC GRADUATION PROJECTS 2027 | إدارة مشاريع التخرج</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=display" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            cairo: ['Cairo', sans-serif]
+          },
+          colors: {
+            ugec: {
+              bg: '#020617',
+              panel: '#0b1026',
+              card: '#0f1629',
+              border: '#1e293b',
+              accent: '#38bdf8',
+              amber: '#f59e0b',
+              green: '#22c55e',
+              red: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="font-cairo bg-ugec-bg text-slate-100 antialiased">
+  <!-- Top Bar -->
+  <header class="fixed top-0 inset-x-0 z-40 border-b border-ugec-border bg-ugec-bg/95 backdrop-blur">
+    <div class="max-w-[1500px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full border border-ugec-border overflow-hidden shadow-lg shadow-sky-500/10">
+          <img src="3.png" alt="UGEC" class="w-full h-full object-cover">
+        </div>
+        <div class="leading-tight">
+          <div class="text-sm md:text-base font-extrabold text-white">UGEC GRADUATION PROJECTS 2027</div>
+          <div class="text-[10px] md:text-xs text-slate-400">منصة إدارة مشاريع تخرج محطات الجهد العالي - مبادرة UGEC</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="openNotifications()" class="relative hidden" id="notifBtn">
+          <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-ugec-border text-slate-300 hover:text-white transition">
+            <i class="fa-solid fa-bell"></i>
+          </span>
+          <span id="notifDot" class="hidden absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400"></span>
+        </button>
+        <button onclick="openGlobalSettings()" class="hidden" id="mentorSettingsBtn">
+          <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400 text-xs font-bold hover:bg-amber-500/10 transition">
+            <i class="fa-solid fa-gear"></i> إعدادات المنصة
+          </span>
+        </button>
+        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ugec-border bg-ugec-card text-xs">
+          <i class="fa-solid fa-shield-halved text-amber-400"></i>
+          <span id="activeRoleLabel">بوابة الجامعات</span>
+        </div>
+        <button onclick="logout()" class="hidden" id="logoutBtn">
+          <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ugec-border text-slate-300 text-xs hover:text-white transition">
+            <i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Auth Gate -->
+  <main id="authGate" class="min-h-screen relative overflow-hidden flex items-center justify-center px-4 pt-16">
+    <div class="absolute inset-0 -z-10">
+      <div class="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[900px] h-[900px] rounded-full bg-sky-500/10 blur-[140px]"></div>
+      <div class="absolute bottom-[-30%] right-[-10%] w-[700px] h-[700px] rounded-full bg-amber-500/5 blur-[160px]"></div>
+    </div>
+    <div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+      <div class="space-y-6 text-center lg:text-right">
+        <div class="flex flex-col lg:flex-row items-center lg:items-start gap-4">
+          <div class="w-20 h-20 rounded-full border border-ugec-border overflow-hidden shadow-2xl shadow-sky-500/15">
+            <img src="3.png" alt="UGEC" class="w-full h-full object-cover">
+          </div>
+          <div>
+            <h1 class="text-2xl md:text-4xl font-extrabold leading-tight">UGEC GRADUATION PROJECTS <span class="text-sky-300">2027</span></h1>
+            <p class="mt-2 text-lg text-slate-200">مبادرة دعم مشاريع تخرج محطات الجهد العالي من شركة UGEC</p>
+          </div>
+        </div>
+        <p class="text-slate-400 leading-relaxed max-w-xl mx-auto lg:mx-0">منصة موحدة لمتابعة السيشنات، المدخلات الفنية، التاسكات، المراجعة، والتقييم بين فريق الاستشاري والجامعات المصرية المشاركة، بخصوصية تامة لكل فريق.</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-xl mx-auto lg:mx-0">
+          <div class="ugec-card rounded-2xl p-4 text-center">
+            <div class="text-xs text-slate-400">الجامعات المشاركة</div>
+            <div class="mt-1 text-2xl font-extrabold">٥</div>
+          </div>
+          <div class="ugec-card rounded-2xl p-4 text-center">
+            <div class="text-xs text-slate-400">السيشنات</div>
+            <div class="mt-1 text-2xl font-extrabold">٢</div>
+          </div>
+          <div class="ugec-card rounded-2xl p-4 text-center">
+            <div class="text-xs text-slate-400">التاسكات</div>
+            <div class="mt-1 text-2xl font-extrabold">٣</div>
+          </div>
+          <div class="ugec-card rounded-2xl p-4 text-center">
+            <div class="text-xs text-slate-400">متابعة احترافية</div>
+            <div class="mt-1 text-2xl font-extrabold text-sky-300"><i class="fa-solid fa-check-double"></i></div>
+          </div>
+        </div>
+        <div class="text-xs text-slate-500">تصميم وتنفيذ: <span class="text-sky-300">Islam Ismail</span></div>
+      </div>
+      <div class="w-full max-w-md mx-auto">
+        <div class="ugec-card rounded-3xl p-6 md:p-8 space-y-6 relative overflow-hidden">
+          <div class="absolute -top-20 -left-20 w-48 h-48 rounded-full bg-sky-500/10 blur-3xl"></div>
+          <div class="relative space-y-2 text-center">
+            <div class="text-lg font-extrabold">أهلاً وسهلاً بكم</div>
+            <p class="text-sm text-slate-400">يرجى اختيار نوع الدخول للمتابعة</p>
+          </div>
+          <div class="relative grid grid-cols-1 gap-2">
+            <button onclick="openMentorLogin()" class="ugec-btn-primary w-full justify-center py-3">
+              <i class="fa-solid fa-user-gear"></i> دخول المشرف / المنسق
+            </button>
+            <button onclick="openUniLogin()" class="ugec-btn-ghost w-full justify-center py-3">
+              <i class="fa-solid fa-graduation-cap"></i> دخول فريق الجامعة
+            </button>
+          </div>
+          <div class="relative text-center text-xs text-slate-500">كل الحقوق محفوظة © UGEC 2027</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- App -->
+  <div id="appShell" class="hidden pt-16">
+    <div class="max-w-[1500px] mx-auto px-4 md:px-6">
+      <!-- Summary -->
+      <section class="py-6 space-y-4">
+        <div class="ugec-card rounded-2xl p-5 md:p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div class="space-y-1">
+            <div class="text-lg md:text-xl font-extrabold">لوحة متابعة مبادرة UGEC لدعم مشاريع تخرج الجهد العالي</div>
+            <div class="text-sm text-slate-400">متابعة السيشنات، المدخلات، التاسكات، المراجعات والتقييم</div>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
+            <div class="ugec-stat">
+              <div class="text-[10px] text-slate-400">عدد السيشنات</div>
+              <div class="text-xl font-extrabold" id="statSessions">0</div>
+            </div>
+            <div class="ugec-stat">
+              <div class="text-[10px] text-slate-400">عدد التاسكات</div>
+              <div class="text-xl font-extrabold" id="statTasks">0</div>
+            </div>
+            <div class="ugec-stat">
+              <div class="text-[10px] text-slate-400">مراجعات معلقة</div>
+              <div class="text-xl font-extrabold" id="statPending">0</div>
+            </div>
+            <div class="ugec-stat">
+              <div class="text-[10px] text-slate-400">نسبة استكمال المشروع</div>
+              <div class="text-xl font-extrabold"><span id="statProgress">0</span>%</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tabs -->
+      <nav class="flex flex-wrap items-center gap-2 mb-6">
+        <button class="tab-btn active" data-tab="dashboard"><i class="fa-solid fa-chart-line"></i> الرئيسية</button>
+        <button class="tab-btn" data-tab="sessions"><i class="fa-solid fa-chalkboard-user"></i> السيشنات والورش</button>
+        <button class="tab-btn" data-tab="inputs"><i class="fa-solid fa-file-lines"></i> المدخلات الفنية</button>
+        <button class="tab-btn" data-tab="tasks"><i class="fa-solid fa-list-check"></i> التاسكات</button>
+        <button class="tab-btn hidden" id="tabReviewsBtn" data-tab="reviews"><i class="fa-solid fa-magnifying-glass"></i> المراجعة والتقييم</button>
+        <button class="tab-btn" data-tab="teams"><i class="fa-solid fa-users"></i> الفرق والجامعات</button>
+        <button class="tab-btn" data-tab="report"><i class="fa-solid fa-file-contract"></i> التقرير الشامل</button>
+      </nav>
+
+      <!-- Dashboard -->
+      <section class="tab-pane" id="tab-dashboard">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+          <div class="xl:col-span-8 space-y-4">
+            <div class="ugec-card rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-4">
+                <div class="font-bold">أقرب التاسكات</div>
+                <button class="hidden mentor-action" onclick="openAddTaskModal()"><span class="ugec-chip"><i class="fa-solid fa-plus"></i> إضافة تاسك</span></button>
+              </div>
+              <div id="dashTasks" class="space-y-2"></div>
+            </div>
+            <div class="ugec-card rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-4">
+                <div class="font-bold">أحدث السيشنات</div>
+                <button class="hidden mentor-action" onclick="openAddSessionModal()"><span class="ugec-chip"><i class="fa-solid fa-plus"></i> إدراج سيشن</span></button>
+              </div>
+              <div id="dashSessions" class="space-y-2"></div>
+            </div>
+          </div>
+          <div class="xl:col-span-4 space-y-4">
+            <div class="ugec-card rounded-2xl p-5">
+              <div class="font-bold mb-3" id="dashRightTitle">الجامعات المشاركة</div>
+              <div id="dashTeams" class="space-y-2"></div>
+              <div id="dashRanking" class="space-y-2 hidden"></div>
+            </div>
+            <div class="ugec-card rounded-2xl p-5">
+              <div class="font-bold mb-3">لجنة المتابعة</div>
+              <div id="dashSupervisors" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sessions -->
+      <section class="tab-pane hidden" id="tab-sessions">
+        <div class="ugec-card rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="font-bold">السيشنات والورش الفنية</div>
+              <div class="text-xs text-slate-400">يمكن إضافة وتعديل وحذف السيشنات من قبل المشرف فقط</div>
+            </div>
+            <button class="hidden mentor-action" onclick="openAddSessionModal()"><span class="ugec-chip amber"><i class="fa-solid fa-plus"></i> إدراج سيشن جديدة</span></button>
+          </div>
+          <div id="sessionsList" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- Inputs -->
+      <section class="tab-pane hidden" id="tab-inputs">
+        <div class="ugec-card rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="font-bold">المدخلات الفنية</div>
+              <div class="text-xs text-slate-400">ملفات ورموز ومعايير يتم إعطاؤها للفرق</div>
+            </div>
+            <button class="hidden mentor-action" onclick="openAddInputModal()"><span class="ugec-chip amber"><i class="fa-solid fa-plus"></i> رفع مدخل فني</span></button>
+          </div>
+          <div id="inputsList" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- Tasks -->
+      <section class="tab-pane hidden" id="tab-tasks">
+        <div class="ugec-card rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="font-bold">التاسكات</div>
+              <div class="text-xs text-slate-400">كل فريق يرفع تسليمه بسرية تامة</div>
+            </div>
+            <button class="hidden mentor-action" onclick="openAddTaskModal()"><span class="ugec-chip amber"><i class="fa-solid fa-plus"></i> إضافة تاسك جديد</span></button>
+          </div>
+          <div id="tasksList" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- Reviews -->
+      <section class="tab-pane hidden" id="tab-reviews">
+        <div class="ugec-card rounded-2xl p-5">
+          <div class="mb-4">
+            <div class="font-bold">المراجعة والتقييم</div>
+            <div class="text-xs text-slate-400">مراجعة تسليمات الفرق وإضافة التقييم والملاحظات</div>
+          </div>
+          <div id="reviewsList" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- Teams -->
+      <section class="tab-pane hidden" id="tab-teams">
+        <div class="ugec-card rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="font-bold">الفرق والجامعات المشاركة</div>
+              <div class="text-xs text-slate-400">يمكن تعديل بيانات كل فريق يدوياً</div>
+            </div>
+            <button class="hidden mentor-action" onclick="openAddTeamModal()"><span class="ugec-chip amber"><i class="fa-solid fa-plus"></i> إضافة فريق</span></button>
+          </div>
+          <div id="teamsList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+        </div>
+      </section>
+
+      <!-- Report -->
+      <section class="tab-pane hidden" id="tab-report">
+        <div class="ugec-card rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-bold">التقرير الشامل</div>
+              <div class="text-xs text-slate-400">يظهر لكل فريق تقريره الخاص فقط حفاظاً على الخصوصية</div>
+            </div>
+            <button onclick="window.print()"><span class="ugec-chip"><i class="fa-solid fa-print"></i> طباعة التقرير</span></button>
+          </div>
+          <div id="reportContent" class="overflow-x-auto"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Mentor Login Modal -->
+  <div id="mentorLoginModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-sm">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold">دخول المشرف / المنسق</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="loginMentor(event)" class="space-y-3">
+        <input id="mentorPass" type="password" class="ugec-input" placeholder="كلمة المرور" required>
+        <button class="ugec-btn-primary w-full justify-center">دخول</button>
+      </form>
+      <p class="text-[10px] text-slate-500 mt-2 text-center">كلمة المرور الافتراضية: ugec@2027</p>
+    </div>
+  </div>
+
+  <!-- Uni Login Modal -->
+  <div id="uniLoginModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-sm">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold">دخول فريق الجامعة</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="loginUni(event)" class="space-y-3">
+        <select id="uniSelect" class="ugec-input"></select>
+        <input id="uniPass" type="password" class="ugec-input" placeholder="كلمة مرور الفريق" required>
+        <button class="ugec-btn-primary w-full justify-center">دخول</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Session Modal -->
+  <div id="addSessionModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-lg">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold" id="sessionModalTitle">إدراج سيشن جديدة</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="saveSession(event)" class="space-y-3">
+        <input type="hidden" id="sessionId">
+        <input id="sessionTitle" class="ugec-input" placeholder="عنوان السيشن / الورشة" required>
+        <input id="sessionPresenter" class="ugec-input" placeholder="المحاضر / الاستشاري" required>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="sessionDate" type="date" class="ugec-input" required>
+          <input id="sessionTime" class="ugec-input" placeholder="الوقت (اختياري)">
+        </div>
+        <textarea id="sessionDesc" class="ugec-input h-24" placeholder="وصف السيشن / موضوع الورشة"></textarea>
+        <button class="ugec-btn-primary w-full justify-center">حفظ</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Session Video Modal -->
+  <div id="sessionVideoModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-lg">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold">رفع فيديو السيشن</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="saveSessionVideo(event)" class="space-y-3">
+        <input type="hidden" id="sessionVideoId">
+        <input id="sessionVideoLink" class="ugec-input" placeholder="رابط فيديو السيشن (YouTube / Google Drive / أي رابط مباشر)" required>
+        <div class="text-xs text-slate-500">بعد الحفظ سيظهر زر "مشاهدة فيديو السيشن" تلقائياً للطلاب</div>
+        <button class="ugec-btn-primary w-full justify-center">حفظ الرابط</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Input Modal -->
+  <div id="addInputModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-lg">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold" id="inputModalTitle">رفع مدخل فني</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="saveInput(event)" class="space-y-3">
+        <input type="hidden" id="inputId">
+        <input id="inputTitle" class="ugec-input" placeholder="عنوان المدخل الفني" required>
+        <input id="inputRef" class="ugec-input" placeholder="رقم المرجع / الكود (اختياري)">
+        <textarea id="inputDesc" class="ugec-input h-24" placeholder="وصف المدخل الفني"></textarea>
+        <input id="inputLink" class="ugec-input" placeholder="رابط الملف (Google Drive / SharePoint) أو اسم الملف">
+        <button class="ugec-btn-primary w-full justify-center">حفظ</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Task Modal -->
+  <div id="addTaskModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-lg">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold" id="taskModalTitle">إضافة تاسك جديد</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="saveTask(event)" class="space-y-3">
+        <input type="hidden" id="taskId">
+        <input id="taskTitle" class="ugec-input" placeholder="عنوان التاسك" required>
+        <textarea id="taskDesc" class="ugec-input h-24" placeholder="تفاصيل التاسك والمتطلبات"></textarea>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="taskDeadline" type="datetime-local" class="ugec-input" required>
+          <input id="taskFormat" class="ugec-input" placeholder="صيغة التسليم (DWG/PDF/EXCEL)">
+        </div>
+        <button class="ugec-btn-primary w-full justify-center">حفظ</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Submit Task Modal -->
+  <div id="submitTaskModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-lg">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold">رفع تسليم الفريق</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="submitTask(event)" class="space-y-3">
+        <input type="hidden" id="submitTaskId">
+        <input id="submitRev" class="ugec-input" placeholder="رقم الإصدار (مثال: Rev.01)" required>
+        <input id="submitFileName" class="ugec-input" placeholder="اسم الملف (مثال: SLD_Group1_Rev01.dwg)" required>
+        <input id="submitFileLink" class="ugec-input" placeholder="رابط الملف (Google Drive / OneDrive)" required>
+        <textarea id="submitNotes" class="ugec-input h-24" placeholder="ملاحظات الفريق (اختياري)"></textarea>
+        <button class="ugec-btn-primary w-full justify-center">رفع التسليم</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Review Modal -->
+  <div id="reviewModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-lg">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold">تقييم وتسليم الملاحظات</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="saveReview(event)" class="space-y-3">
+        <input type="hidden" id="reviewSubId">
+        <div class="grid grid-cols-2 gap-2">
+          <input id="reviewScore" type="number" min="0" max="100" class="ugec-input" placeholder="التقييم الكلي /100" required>
+          <select id="reviewStatus" class="ugec-input">
+            <option value="under_review">تحت المراجعة</option>
+            <option value="revision">يحتاج تعديل</option>
+            <option value="approved">معتمد</option>
+          </select>
+        </div>
+        <textarea id="reviewMajor" class="ugec-input h-20" placeholder="ملاحظات رئيسية"></textarea>
+        <textarea id="reviewMinor" class="ugec-input h-20" placeholder="ملاحظات فرعية"></textarea>
+        <button class="ugec-btn-primary w-full justify-center">حفظ التقييم</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Team Modal -->
+  <div id="teamModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold" id="teamModalTitle">إضافة فريق</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="saveTeam(event)" class="space-y-3">
+        <input type="hidden" id="teamId">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <input id="teamUniName" class="ugec-input" placeholder="اسم الجامعة" required>
+          <input id="teamGroup" class="ugec-input" placeholder="اسم المجموعة / الفريق" required>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <input id="teamPass" class="ugec-input" placeholder="كلمة مرور الدخول" required>
+          <input id="teamProject" class="ugec-input" placeholder="عنوان مشروع التخرج">
+        </div>
+        <div class="text-xs text-slate-400 mt-2">لجنة المتابعة</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <input id="teamCoordinator" class="ugec-input" placeholder="Project Coordinator">
+          <input id="teamPrimaryEngineer" class="ugec-input" placeholder="Primary Engineer">
+          <input id="teamSecondaryEngineer" class="ugec-input" placeholder="Secondary Engineer">
+        </div>
+        <textarea id="teamMembers" class="ugec-input h-32" placeholder="أعضاء الفريق (اكتب كل اسم في سطر جديد، تقدر تكتب عدد كبير جداً)"></textarea>
+        <input id="teamAdvisor" class="ugec-input" placeholder="جهات أخرى / ملاحظات (اختياري)">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <input id="teamProgress" type="number" min="0" max="100" class="ugec-input" placeholder="نسبة الإنجاز يدوياً %">
+          <input id="teamScore" type="number" min="0" max="100" class="ugec-input" placeholder="التقييم الكلي يدوياً /100">
+        </div>
+        <button class="ugec-btn-primary w-full justify-center">حفظ</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notifications Modal -->
+  <div id="notificationsModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-md">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold">الإشعارات</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="notificationsList" class="space-y-2 max-h-[60vh] overflow-auto"></div>
+    </div>
+  </div>
+
+  <!-- Global Settings Modal -->
+  <div id="globalSettingsModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-xl">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-bold">إعدادات المنصة (خاص بالمشرف)</div>
+        <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <input id="gsSessions" type="number" class="ugec-input" placeholder="عدد السيشنات">
+          <input id="gsTasks" type="number" class="ugec-input" placeholder="عدد التاسكات">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="gsPending" type="number" class="ugec-input" placeholder="مراجعات معلقة">
+          <input id="gsProgress" type="number" min="0" max="100" class="ugec-input" placeholder="نسبة استكمال المشروع %">
+        </div>
+        <button onclick="saveGlobalSettings()" class="ugec-btn-primary w-full justify-center">حفظ الإعدادات</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="py-8 text-center text-[10px] text-slate-500">
+    <div>UGEC GRADUATION PROJECTS 2027</div>
+    <div>تصميم وتنفيذ: <span class="text-sky-300">Islam Ismail</span></div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
