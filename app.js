@@ -23,8 +23,11 @@ function clean(kind,data) {
   return Object.fromEntries(fields[kind].filter(f => Object.hasOwn(data,f)).map(f => [f,data[f]]));
 }
 function status(message,error=false) {
-  $('cloudStatus').textContent=message;
-  $('cloudStatus').style.color=error?'#fca5a5':'#7dd3fc';
+  const el=$('cloudStatus');
+  el.textContent=message;
+  el.style.color=error?'#fca5a5':'#7dd3fc';
+  if(message) el.classList.remove('h-0','opacity-0');
+  else el.classList.add('h-0','opacity-0');
 }
 function errorText(err) {
   const m=err?.message || String(err);
@@ -116,7 +119,6 @@ async function reloadData() {
       else nextState[row.kind==='teams'?'universities':row.kind].push(data);
     }
     rows=next;state=nextState;await loadNotificationStates();renderAll();
-    status('متصل • آخر تحديث '+new Date().toLocaleTimeString('ar-EG'));
   } finally {refreshing=false;}
 }
 async function refreshData() { if(busy) return; await run(reloadData); }
@@ -504,3 +506,79 @@ function dismissAllNotifications() {return run(async()=>{
   if(!ids.length || !confirm('حذف كل الإشعارات الحالية من حسابك فقط؟')) return;
   await persistNotificationChanges(ids,true);renderNotifications();
 });}
+
+const quranVerses = [
+  { text: '﴿ فَإِنَّ مَعَ الْعُسْرِ يُسْرًا ۝ إِنَّ مَعَ الْعُسْرِ يُسْرًا ﴾', ref: '[ الشرح: 5-6 ]' },
+  { text: '﴿ وَقُل رَّبِّ زِدْنِي عِلْمًا ﴾', ref: '[ طه: 114 ]' },
+  { text: '﴿ وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا ۝ وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ ﴾', ref: '[ الطلاق: 2-3 ]' },
+  { text: '﴿ وَإِذَا سَأَلَكَ عِبَادِي عَنِّي فَإِنِّي قَرِيبٌ أُجِيبُ دَعْوَةَ الدَّاعِ إِذَا دَعَانِ ﴾', ref: '[ البقرة: 186 ]' },
+  { text: '﴿ سَيَجْعَلُ اللَّهُ بَعْدَ عُسْرٍ يُسْرًا ﴾', ref: '[ الطلاق: 7 ]' },
+  { text: '﴿ وَأَن لَّيْسَ لِلْإِنسَانِ إِلَّا مَا سَعَىٰ ۝ وَأَنَّ سَعْيَهُ سَوْفَ يُرَىٰ ﴾', ref: '[ النجم: 39-40 ]' },
+  { text: '﴿ إِنَّ اللَّهَ مَعَ الصَّابِرِينَ ﴾', ref: '[ البقرة: 153 ]' },
+  { text: '﴿ لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا ﴾', ref: '[ البقرة: 286 ]' },
+  { text: '﴿ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ ﴾', ref: '[ الرعد: 28 ]' },
+  { text: '﴿ وَمَن يَتَوَكَّلْ عَلَى اللَّهِ فَهُوَ حَسْبُهُ ﴾', ref: '[ الطلاق: 3 ]' },
+  { text: '﴿ إنَّ رَبِّي لَطِيفٌ لِّمَا يَشَاءُ ﴾', ref: '[ يوسف: 100 ]' },
+  { text: '﴿ وَرَحْمَتِي وَسِعَتْ كُلَّ شَيْءٍ ﴾', ref: '[ الأعراف: 156 ]' },
+  { text: '﴿ وَبَشِّرِ الصَّابِرِينَ ﴾', ref: '[ البقرة: 155 ]' },
+  { text: '﴿ ادْعُونِي أَسْتَجِبْ لَكُمْ ﴾', ref: '[ غافر: 60 ]' },
+  { text: '﴿ وَقُلِ اعْمَلُوا فَسَيَرَى اللَّهُ عَمَلَكُمْ وَرَسُولُهُ وَالْمُؤْمِنُونَ ﴾', ref: '[ التوبة: 105 ]' }
+];
+
+let currentVerseIndex = 0;
+let quranHideTimeout = null;
+
+function showQuranToast() {
+  const toast = $('quranToast');
+  const textEl = $('quranText');
+  const refEl = $('quranRef');
+  const progressEl = $('quranProgress');
+  if (!toast || !textEl || !refEl || !progressEl) return;
+
+  const verse = quranVerses[currentVerseIndex];
+  textEl.textContent = verse.text;
+  refEl.textContent = verse.ref;
+
+  progressEl.classList.remove('animate-countdown');
+  void progressEl.offsetWidth;
+  progressEl.classList.add('animate-countdown');
+
+  toast.classList.remove('toast-hidden');
+  toast.classList.add('toast-visible');
+
+  if (quranHideTimeout) clearTimeout(quranHideTimeout);
+
+  quranHideTimeout = setTimeout(() => {
+    hideQuranToast();
+    currentVerseIndex = (currentVerseIndex + 1) % quranVerses.length;
+  }, 15000);
+}
+
+function hideQuranToast() {
+  const toast = $('quranToast');
+  if (toast) {
+    toast.classList.remove('toast-visible');
+    toast.classList.add('toast-hidden');
+  }
+}
+
+function nextQuranVerse() {
+  currentVerseIndex = (currentVerseIndex + 1) % quranVerses.length;
+  showQuranToast();
+}
+
+function initQuranWidget() {
+  setTimeout(() => {
+    showQuranToast();
+  }, 3000);
+
+  setInterval(() => {
+    showQuranToast();
+  }, 65000);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initQuranWidget);
+} else {
+  initQuranWidget();
+}
