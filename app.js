@@ -1,10 +1,4 @@
-const SUPABASE_URL = 'https://qbwtohpodkkxptfxilkz.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFid3RvaHBvZGtreHB0ZnhpbGt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4MzU1MjMsImV4cCI6MjEwODQxMTUyM30.wLFf5guNMYbE71XvFB1c2M7QrXPQUl6aQweKELmY1oc';
-
 let supabase = null;
-if (window.supabase) {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
 
 const STORAGE_KEY = 'UGEC_GP2027_PRO_V1';
 
@@ -107,67 +101,35 @@ const defaultState = {
 let state = JSON.parse(JSON.stringify(defaultState));
 let dataLoaded = false;
 
-async function initData() {
-  if (!supabase) {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
+function initData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
         const parsed = JSON.parse(raw);
         state = { ...JSON.parse(JSON.stringify(defaultState)), ...parsed };
-      } else {
+      } catch (e) {
         state = JSON.parse(JSON.stringify(defaultState));
       }
-    } catch (e) {
-      state = JSON.parse(JSON.stringify(defaultState));
-    }
-    dataLoaded = true;
-    renderAll();
-    updateStats();
-    return;
-  }
-  try {
-    const { data, error } = await supabase.from('app_state').select('*').eq('id', 1).maybeSingle();
-    if (error) throw error;
-    if (data && data.state) {
-      state = { ...JSON.parse(JSON.stringify(defaultState)), ...data.state };
     } else {
       state = JSON.parse(JSON.stringify(defaultState));
-      await supabase.from('app_state').upsert({ id: 1, state: state, updated_at: new Date().toISOString() });
     }
   } catch (e) {
-    console.error('Supabase load error:', e);
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        state = { ...JSON.parse(JSON.stringify(defaultState)), ...parsed };
-      } else {
-        state = JSON.parse(JSON.stringify(defaultState));
-      }
-    } catch (e2) {
-      state = JSON.parse(JSON.stringify(defaultState));
-    }
+    state = JSON.parse(JSON.stringify(defaultState));
   }
   dataLoaded = true;
-  renderAll();
-  updateStats();
+  try { renderAll(); } catch(e){ console.error('renderAll err', e); }
+  try { updateStats(); } catch(e){ console.error('updateStats err', e); }
 }
 
 function loadState() {
   return state;
 }
 
-async function saveState() {
+function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) {}
-  if (supabase) {
-    try {
-      await supabase.from('app_state').upsert({ id: 1, state: state, updated_at: new Date().toISOString() });
-    } catch (e) {
-      console.error('Supabase save error:', e);
-    }
-  }
 }
 
 if (document.readyState === 'loading') {
@@ -183,60 +145,85 @@ function closeModals() {
 }
 
 function openMentorLogin() {
-  closeModals();
-  $('mentorLoginModal').classList.remove('hidden');
+  try {
+    closeModals();
+    const m = $('mentorLoginModal');
+    if (m) m.classList.remove('hidden');
+  } catch (e) { console.error(e); }
 }
 
 function openUniLogin() {
-  closeModals();
-  const sel = $('uniSelect');
-  sel.innerHTML = state.universities.map(u => `<option value="${u.id}">${u.name} ${u.group ? '- ' + u.group : ''}</option>`).join('');
-  $('uniLoginModal').classList.remove('hidden');
+  try {
+    closeModals();
+    const sel = $('uniSelect');
+    if (sel && state && state.universities) {
+      sel.innerHTML = state.universities.map(u => `<option value="${u.id}">${u.name} ${u.group ? '- ' + u.group : ''}</option>`).join('');
+    }
+    const m = $('uniLoginModal');
+    if (m) m.classList.remove('hidden');
+  } catch (e) { console.error(e); }
 }
 
 function loginMentor(e) {
-  e.preventDefault();
-  if ($('mentorPass').value === state.mentorPassword) {
-    state.isMentor = true;
-    state.currentUni = null;
-    saveState();
-    enterApp('مشرف / المنسق');
-    closeModals();
-  } else {
-    alert('كلمة المرور غير صحيحة');
-  }
+  try {
+    e.preventDefault();
+    const passEl = $('mentorPass');
+    if (passEl && passEl.value === (state.mentorPassword || 'ugec@2027')) {
+      state.isMentor = true;
+      state.currentUni = null;
+      saveState();
+      enterApp('مشرف / المنسق');
+      closeModals();
+    } else {
+      alert('كلمة المرور غير صحيحة');
+    }
+  } catch (err) { console.error(err); alert('حدث خطأ'); }
 }
 
 function loginUni(e) {
-  e.preventDefault();
-  const id = $('uniSelect').value;
-  const u = state.universities.find(x => x.id === id);
-  if (!u) return alert('خطأ');
-  if ($('uniPass').value === u.pass) {
-    state.isMentor = false;
-    state.currentUni = u.id;
-    saveState();
-    enterApp(`${u.name} ${u.group || ''}`.trim());
-    closeModals();
-  } else {
-    alert('كلمة المرور غير صحيحة');
-  }
+  try {
+    e.preventDefault();
+    const sel = $('uniSelect');
+    const passEl = $('uniPass');
+    if (!sel || !passEl) return;
+    const id = sel.value;
+    const u = state.universities && state.universities.find(x => x.id === id);
+    if (!u) return alert('خطأ');
+    if (passEl.value === u.pass) {
+      state.isMentor = false;
+      state.currentUni = u.id;
+      saveState();
+      enterApp(`${u.name} ${u.group || ''}`.trim());
+      closeModals();
+    } else {
+      alert('كلمة المرور غير صحيحة');
+    }
+  } catch (err) { console.error(err); alert('حدث خطأ'); }
 }
 
 function enterApp(label) {
-  $('authGate').classList.add('hidden');
-  $('appShell').classList.remove('hidden');
-  $('activeRoleLabel').textContent = label;
-  $('logoutBtn').classList.remove('hidden');
-  $('notifBtn').classList.remove('hidden');
-  if (state.isMentor) {
-    $('mentorSettingsBtn').classList.remove('hidden');
-    document.querySelectorAll('.mentor-action').forEach(b => b.classList.remove('hidden'));
-    $('tabReviewsBtn').classList.remove('hidden');
-  }
-  updateStats();
-  updateNotif();
-  renderAll();
+  try {
+    const authGate = $('authGate');
+    if (authGate) authGate.classList.add('hidden');
+    const appShell = $('appShell');
+    if (appShell) appShell.classList.remove('hidden');
+    const activeRoleLabel = $('activeRoleLabel');
+    if (activeRoleLabel) activeRoleLabel.textContent = label || '';
+    const logoutBtn = $('logoutBtn');
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
+    const notifBtn = $('notifBtn');
+    if (notifBtn) notifBtn.classList.remove('hidden');
+    if (state && state.isMentor) {
+      const mentorSettingsBtn = $('mentorSettingsBtn');
+      if (mentorSettingsBtn) mentorSettingsBtn.classList.remove('hidden');
+      document.querySelectorAll('.mentor-action').forEach(b => b.classList.remove('hidden'));
+      const tabReviewsBtn = $('tabReviewsBtn');
+      if (tabReviewsBtn) tabReviewsBtn.classList.remove('hidden');
+    }
+    try { updateStats(); } catch(e){}
+    try { updateNotif(); } catch(e){}
+    try { renderAll(); } catch(e){}
+  } catch (e) { console.error(e); }
 }
 
 function logout() {
@@ -247,10 +234,12 @@ function logout() {
 }
 
 function updateStats() {
-  $('statSessions').textContent = state.global.sessions;
-  $('statTasks').textContent = state.global.tasks;
-  $('statPending').textContent = state.global.pending;
-  $('statProgress').textContent = state.global.progress;
+  try {
+    if ($('statSessions')) $('statSessions').textContent = (state.global && state.global.sessions) || 0;
+    if ($('statTasks')) $('statTasks').textContent = (state.global && state.global.tasks) || 0;
+    if ($('statPending')) $('statPending').textContent = (state.global && state.global.pending) || 0;
+    if ($('statProgress')) $('statProgress').textContent = (state.global && state.global.progress) || 0;
+  } catch (e) { console.error(e); }
 }
 
 function openGlobalSettings() {
@@ -273,24 +262,26 @@ function saveGlobalSettings() {
   renderAll();
 }
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest && e.target.closest('.tab-btn');
+  if (btn) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-    $('tab-' + btn.dataset.tab).classList.remove('hidden');
-    renderAll();
-  });
+    const pane = $('tab-' + btn.dataset.tab);
+    if (pane) pane.classList.remove('hidden');
+    try { renderAll(); } catch(err){}
+  }
 });
 
 function renderAll() {
-  renderDashboard();
-  renderSessions();
-  renderInputs();
-  renderTasks();
-  renderReviews();
-  renderTeams();
-  renderReport();
+  try { renderDashboard(); } catch(e){ console.error('renderDashboard err', e); }
+  try { renderSessions(); } catch(e){ console.error('renderSessions err', e); }
+  try { renderInputs(); } catch(e){ console.error('renderInputs err', e); }
+  try { renderTasks(); } catch(e){ console.error('renderTasks err', e); }
+  try { renderReviews(); } catch(e){ console.error('renderReviews err', e); }
+  try { renderTeams(); } catch(e){ console.error('renderTeams err', e); }
+  try { renderReport(); } catch(e){ console.error('renderReport err', e); }
 }
 
 function getCumulativeScore(uniId) {
