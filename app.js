@@ -1,3 +1,11 @@
+const SUPABASE_URL = 'https://qbwtohpodkkxptfxilkz.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFid3RvaHBvZGtreHB0ZnhpbGt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4MzU1MjMsImV4cCI6MjEwODQxMTUyM30.wLFf5guNMYbE71XvFB1c2M7QrXPQUl6aQweKELmY1oc';
+
+let supabase = null;
+if (window.supabase) {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
 const STORAGE_KEY = 'UGEC_GP2027_PRO_V1';
 
 const defaultState = {
@@ -96,21 +104,76 @@ const defaultState = {
   submissions: []
 };
 
-let state = loadState();
+let state = JSON.parse(JSON.stringify(defaultState));
+let dataLoaded = false;
+
+async function initData() {
+  if (!supabase) {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        state = { ...JSON.parse(JSON.stringify(defaultState)), ...parsed };
+      } else {
+        state = JSON.parse(JSON.stringify(defaultState));
+      }
+    } catch (e) {
+      state = JSON.parse(JSON.stringify(defaultState));
+    }
+    dataLoaded = true;
+    renderAll();
+    updateStats();
+    return;
+  }
+  try {
+    const { data, error } = await supabase.from('app_state').select('*').eq('id', 1).maybeSingle();
+    if (error) throw error;
+    if (data && data.state) {
+      state = { ...JSON.parse(JSON.stringify(defaultState)), ...data.state };
+    } else {
+      state = JSON.parse(JSON.stringify(defaultState));
+      await supabase.from('app_state').upsert({ id: 1, state: state, updated_at: new Date().toISOString() });
+    }
+  } catch (e) {
+    console.error('Supabase load error:', e);
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        state = { ...JSON.parse(JSON.stringify(defaultState)), ...parsed };
+      } else {
+        state = JSON.parse(JSON.stringify(defaultState));
+      }
+    } catch (e2) {
+      state = JSON.parse(JSON.stringify(defaultState));
+    }
+  }
+  dataLoaded = true;
+  renderAll();
+  updateStats();
+}
 
 function loadState() {
+  return state;
+}
+
+async function saveState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return JSON.parse(JSON.stringify(defaultState));
-    const parsed = JSON.parse(raw);
-    return { ...JSON.parse(JSON.stringify(defaultState)), ...parsed };
-  } catch (e) {
-    return JSON.parse(JSON.stringify(defaultState));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {}
+  if (supabase) {
+    try {
+      await supabase.from('app_state').upsert({ id: 1, state: state, updated_at: new Date().toISOString() });
+    } catch (e) {
+      console.error('Supabase save error:', e);
+    }
   }
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initData);
+} else {
+  initData();
 }
 
 function $(id) { return document.getElementById(id); }
