@@ -1,495 +1,286 @@
-let supabase = null;
-
+'use strict';
 const STORAGE_KEY = 'UGEC_GP2027_PRO_V1';
-
-const defaultState = {
-  mentorPassword: 'ugec@2027',
-  isMentor: false,
-  currentUni: null,
-  notifications: [],
-  global: {
-    sessions: 2,
-    tasks: 3,
-    pending: 0,
-    progress: 10
-  },
-  universities: [
-    {
-      id: 'u1',
-      name: 'جامعة القاهرة',
-      group: 'مجموعة 1',
-      pass: 'cairo1',
-      members: 'أسماء أعضاء الفريق',
-      coordinator: '',
-      primaryEngineer: '',
-      secondaryEngineer: '',
-      advisor: '',
-      project: 'مشروع تخرج محطة الجهد العالي',
-      progress: 10,
-      score: 0
-    },
-    {
-      id: 'u2',
-      name: 'جامعة القاهرة',
-      group: 'مجموعة 2',
-      pass: 'cairo2',
-      members: '',
-      coordinator: '',
-      primaryEngineer: '',
-      secondaryEngineer: '',
-      advisor: '',
-      project: '',
-      progress: 10,
-      score: 0
-    },
-    {
-      id: 'u3',
-      name: 'جامعة سوهاج',
-      group: '',
-      pass: 'sohag1',
-      members: '',
-      coordinator: '',
-      primaryEngineer: '',
-      secondaryEngineer: '',
-      advisor: '',
-      project: '',
-      progress: 10,
-      score: 0
-    },
-    {
-      id: 'u4',
-      name: 'جامعة قنا',
-      group: '',
-      pass: 'qena1',
-      members: '',
-      coordinator: '',
-      primaryEngineer: '',
-      secondaryEngineer: '',
-      advisor: '',
-      project: '',
-      progress: 10,
-      score: 0
-    },
-    {
-      id: 'u5',
-      name: 'جامعة الزقازيق',
-      group: '',
-      pass: 'zag1',
-      members: '',
-      coordinator: '',
-      primaryEngineer: '',
-      secondaryEngineer: '',
-      advisor: '',
-      project: '',
-      progress: 10,
-      score: 0
-    }
-  ],
-  sessions: [
-    { id: 's1', title: 'السيشن الأولى', presenter: 'استشاري UGEC', date: '2026-01-01', time: '', desc: '' },
-    { id: 's2', title: 'السيشن الثانية', presenter: 'استشاري UGEC', date: '2026-02-01', time: '', desc: '' }
-  ],
-  inputs: [],
-  tasks: [
-    { id: 't1', title: 'التاسك الأول', desc: '', deadline: '', format: 'DWG/PDF', createdAt: Date.now() },
-    { id: 't2', title: 'التاسك الثاني', desc: '', deadline: '', format: 'DWG/PDF', createdAt: Date.now() },
-    { id: 't3', title: 'التاسك الثالث', desc: '', deadline: '', format: 'DWG/PDF', createdAt: Date.now() }
-  ],
-  submissions: []
+const BUCKET = 'ugec-files';
+const kinds = ['teams','sessions','inputs','tasks','submissions','settings'];
+const fields = {
+  teams: ['name','group','members','coordinator','primaryEngineer','secondaryEngineer','advisor','progress','score','project'],
+  sessions: ['title','presenter','date','time','desc','videoLink'],
+  inputs: ['title','ref','desc','link','storagePath','fileName'],
+  tasks: ['title','desc','deadline','format','createdAt'],
+  submissions: ['taskId','uniId','rev','fileName','fileLink','storagePath','notes','status','score','major','minor','date'],
+  settings: ['sessions','tasks','pending','progress']
 };
-
-let state = JSON.parse(JSON.stringify(defaultState));
-let dataLoaded = false;
-
-function initData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        state = { ...JSON.parse(JSON.stringify(defaultState)), ...parsed };
-      } catch (e) {
-        state = JSON.parse(JSON.stringify(defaultState));
-      }
-    } else {
-      state = JSON.parse(JSON.stringify(defaultState));
-    }
-  } catch (e) {
-    state = JSON.parse(JSON.stringify(defaultState));
-  }
-  dataLoaded = true;
-  try { renderAll(); } catch(e){ console.error('renderAll err', e); }
-  try { updateStats(); } catch(e){ console.error('updateStats err', e); }
-}
-
-function loadState() {
-  return state;
-}
-
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {}
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initData);
-} else {
-  initData();
-}
-
+let db, profile, user, busy = false, refreshing = false;
+let rows = new Map();
+let state = emptyState();
 function $(id) { return document.getElementById(id); }
-
-function closeModals() {
-  document.querySelectorAll('.ugec-modal').forEach(m => m.classList.add('hidden'));
+function emptyState() { return {isMentor:false,currentUni:null,universities:[],sessions:[],inputs:[],tasks:[],submissions:[],notifications:[],global:{sessions:0,tasks:0,pending:0,progress:0}}; }
+function key(kind,id) { return kind+':'+id; }
+function uid() { return crypto.randomUUID(); }
+function clean(kind,data) {
+  return Object.fromEntries(fields[kind].filter(f => Object.hasOwn(data,f)).map(f => [f,data[f]]));
 }
-
-function openMentorLogin() {
+function status(message,error=false) {
+  $('cloudStatus').textContent=message;
+  $('cloudStatus').style.color=error?'#fca5a5':'#7dd3fc';
+}
+function errorText(err) {
+  const m=err?.message || String(err);
+  if (/Invalid login credentials/i.test(m)) return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+  if (/Email not confirmed/i.test(m)) return 'البريد غير مؤكد. راجع رسالة التأكيد أو إعداد الحساب في Supabase.';
+  if (/ugec_profiles|ugec_documents|schema cache|relation .* does not exist/i.test(m)) return 'إعداد قاعدة البيانات غير مكتمل. نفّذ setup.sql في SQL Editor أولاً.';
+  return m;
+}
+function showError(err) { status('لم تكتمل العملية: '+errorText(err),true); alert(errorText(err)); }
+async function run(action) {
+  if(busy) return;
+  if(refreshing) {status("جاري تحديث البيانات، حاول مجددًا بعد لحظة.");return;}
+  busy=true;
+  const buttons=[...document.querySelectorAll('form button, #importLegacyBtn')];
+  const previous=buttons.map(b=>b.disabled);
+  buttons.forEach(b=>b.disabled=true);
+  try { if(!navigator.onLine) throw Error('لا يوجد اتصال بالإنترنت. لم يتم حفظ تغييراتك.'); await action(); }
+  catch(err) { showError(err); }
+  finally {buttons.forEach((b,i)=>b.disabled=previous[i]);busy=false;}
+}
+function closeModals() { document.querySelectorAll('.ugec-modal').forEach(m=>m.classList.add('hidden')); }
+function openMentorLogin() { closeModals(); $('mentorLoginModal').classList.remove('hidden'); }
+function openUniLogin() { closeModals(); $('uniLoginModal').classList.remove('hidden'); }
+async function initData() {
   try {
-    closeModals();
-    const m = $('mentorLoginModal');
-    if (m) m.classList.remove('hidden');
-  } catch (e) { console.error(e); }
+    if(!window.supabase || !window.UGEC_CONFIG) throw Error('تعذر تحميل مكتبة الاتصال. تحقق من اتصال الإنترنت وأعد تحميل الصفحة.');
+    db=window.supabase.createClient(UGEC_CONFIG.url,UGEC_CONFIG.key);
+    const {data,error}=await db.auth.getSession(); if(error) throw error;
+    if(data.session) await establish(data.session.user);
+    else status('جاهز لتسجيل الدخول. استخدم حساب البريد الإلكتروني الجديد.');
+    db.auth.onAuthStateChange(event=>{ if(event==='SIGNED_OUT') resetAuth(); });
+  } catch(err) {status(errorText(err),true);}
 }
-
-function openUniLogin() {
-  try {
-    closeModals();
-    const sel = $('uniSelect');
-    if (sel && state && state.universities) {
-      sel.innerHTML = state.universities.map(u => `<option value="${u.id}">${u.name} ${u.group ? '- ' + u.group : ''}</option>`).join('');
-    }
-    const m = $('uniLoginModal');
-    if (m) m.classList.remove('hidden');
-  } catch (e) { console.error(e); }
-}
-
-function loginMentor(e) {
-  try {
-    e.preventDefault();
-    const passEl = $('mentorPass');
-    if (passEl && passEl.value === (state.mentorPassword || 'ugec@2027')) {
-      state.isMentor = true;
-      state.currentUni = null;
-      saveState();
-      enterApp('مشرف / المنسق');
-      closeModals();
-    } else {
-      alert('كلمة المرور غير صحيحة');
-    }
-  } catch (err) { console.error(err); alert('حدث خطأ'); }
-}
-
-function loginUni(e) {
-  try {
-    e.preventDefault();
-    const sel = $('uniSelect');
-    const passEl = $('uniPass');
-    if (!sel || !passEl) return;
-    const id = sel.value;
-    const u = state.universities && state.universities.find(x => x.id === id);
-    if (!u) return alert('خطأ');
-    if (passEl.value === u.pass) {
-      state.isMentor = false;
-      state.currentUni = u.id;
-      saveState();
-      enterApp(`${u.name} ${u.group || ''}`.trim());
-      closeModals();
-    } else {
-      alert('كلمة المرور غير صحيحة');
-    }
-  } catch (err) { console.error(err); alert('حدث خطأ'); }
-}
-
-function enterApp(label) {
-  try {
-    const authGate = $('authGate');
-    if (authGate) authGate.classList.add('hidden');
-    const appShell = $('appShell');
-    if (appShell) appShell.classList.remove('hidden');
-    const activeRoleLabel = $('activeRoleLabel');
-    if (activeRoleLabel) activeRoleLabel.textContent = label || '';
-    const logoutBtn = $('logoutBtn');
-    if (logoutBtn) logoutBtn.classList.remove('hidden');
-    const notifBtn = $('notifBtn');
-    if (notifBtn) notifBtn.classList.remove('hidden');
-    if (state && state.isMentor) {
-      const mentorSettingsBtn = $('mentorSettingsBtn');
-      if (mentorSettingsBtn) mentorSettingsBtn.classList.remove('hidden');
-      document.querySelectorAll('.mentor-action').forEach(b => b.classList.remove('hidden'));
-      const tabReviewsBtn = $('tabReviewsBtn');
-      if (tabReviewsBtn) tabReviewsBtn.classList.remove('hidden');
-    }
-    try { updateStats(); } catch(e){}
-    try { updateNotif(); } catch(e){}
-    try { renderAll(); } catch(e){}
-  } catch (e) { console.error(e); }
-}
-
-function logout() {
-  state.isMentor = false;
-  state.currentUni = null;
-  saveState();
-  location.reload();
-}
-
-function updateStats() {
-  try {
-    if ($('statSessions')) $('statSessions').textContent = (state.global && state.global.sessions) || 0;
-    if ($('statTasks')) $('statTasks').textContent = (state.global && state.global.tasks) || 0;
-    if ($('statPending')) $('statPending').textContent = (state.global && state.global.pending) || 0;
-    if ($('statProgress')) $('statProgress').textContent = (state.global && state.global.progress) || 0;
-  } catch (e) { console.error(e); }
-}
-
-function openGlobalSettings() {
-  closeModals();
-  $('gsSessions').value = state.global.sessions;
-  $('gsTasks').value = state.global.tasks;
-  $('gsPending').value = state.global.pending;
-  $('gsProgress').value = state.global.progress;
-  $('globalSettingsModal').classList.remove('hidden');
-}
-
-function saveGlobalSettings() {
-  state.global.sessions = +$('gsSessions').value || 0;
-  state.global.tasks = +$('gsTasks').value || 0;
-  state.global.pending = +$('gsPending').value || 0;
-  state.global.progress = +$('gsProgress').value || 0;
-  saveState();
-  updateStats();
-  closeModals();
-  renderAll();
-}
-
-document.addEventListener('click', function(e) {
-  const btn = e.target.closest && e.target.closest('.tab-btn');
-  if (btn) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-    const pane = $('tab-' + btn.dataset.tab);
-    if (pane) pane.classList.remove('hidden');
-    try { renderAll(); } catch(err){}
-  }
-});
-
-function renderAll() {
-  try { renderDashboard(); } catch(e){ console.error('renderDashboard err', e); }
-  try { renderSessions(); } catch(e){ console.error('renderSessions err', e); }
-  try { renderInputs(); } catch(e){ console.error('renderInputs err', e); }
-  try { renderTasks(); } catch(e){ console.error('renderTasks err', e); }
-  try { renderReviews(); } catch(e){ console.error('renderReviews err', e); }
-  try { renderTeams(); } catch(e){ console.error('renderTeams err', e); }
-  try { renderReport(); } catch(e){ console.error('renderReport err', e); }
-}
-
-function getCumulativeScore(uniId) {
-  const subs = state.submissions.filter(s => s.uniId === uniId);
-  if (!subs.length) return 0;
-  let total = 0;
-  let count = 0;
-  subs.forEach(s => {
-    if (s.score !== '' && s.score !== null && s.score !== undefined) {
-      total += Number(s.score) || 0;
-      count++;
-    }
+async function login(e,role) {
+  e.preventDefault();
+  await run(async()=>{
+    if(!db) throw Error('الاتصال غير جاهز. أعد تحميل الصفحة.');
+    const prefix=role==='mentor'?'mentor':'uni';
+    const {data,error}=await db.auth.signInWithPassword({email:$(prefix+'Email').value.trim(),password:$(prefix+'Pass').value});
+    if(error) throw error;
+    try { await establish(data.user,role); }
+    catch(err) {await db.auth.signOut();throw err;}
+    $(prefix+'Pass').value=''; closeModals();
   });
-  if (count === 0) return 0;
-  return Math.round((total / count) * 10) / 10;
 }
-
-function showTaskResult(subId) {
-  closeModals();
-  const s = state.submissions.find(x => x.id === subId);
-  if (!s) return;
-  const t = state.tasks.find(x => x.id === s.taskId);
-  const score = Number(s.score) || 0;
-  let extra = '';
-  if (score >= 60) {
-    extra = '<div class="mt-4 text-center text-2xl font-extrabold text-emerald-400 animate-pulse">🎉 Congratulations 🎉</div>';
+function loginMentor(e) { return login(e,'mentor'); }
+function loginUni(e) { return login(e,'team'); }
+async function establish(account,expectedRole) {
+  const {data,error}=await db.from('ugec_profiles').select('role,team_id').eq('user_id',account.id).maybeSingle();
+  if(error) throw error;
+  if(!data) throw Error('حسابك ليس له صلاحية بعد. يلزم ربطه بدور وفريق باستخدام accounts.sql.');
+  if(expectedRole && data.role!==expectedRole) throw Error('استخدم بوابة الدخول المناسبة لدور حسابك.');
+  user=account;profile=data;
+  await reloadData();
+  $('authGate').classList.add('hidden'); $('appShell').classList.remove('hidden');
+  $('notifBtn').classList.remove('hidden');
+  $('logoutBtn').classList.remove('hidden'); $('refreshBtn').classList.remove('hidden');
+  $('activeRoleLabel').textContent=state.isMentor?'مشرف / المنسق':state.universities[0]?.name||'فريق الجامعة';
+  $('mentorSettingsBtn').classList.toggle('hidden',!state.isMentor);
+  $('tabReviewsBtn').classList.toggle('hidden',!state.isMentor);
+  document.querySelectorAll('.mentor-action').forEach(b=>b.classList.toggle('hidden',!state.isMentor));
+}
+function resetAuth() {
+  user=null;profile=null;rows.clear();state=emptyState();closeModals();renderAll();
+  $('appShell').classList.add('hidden');$('authGate').classList.remove('hidden');
+  ['logoutBtn','mentorSettingsBtn','refreshBtn','notifBtn'].forEach(id=>$(id).classList.add('hidden'));
+  document.querySelectorAll('.mentor-action').forEach(b=>b.classList.add('hidden'));
+  status('تم تسجيل الخروج.');
+}
+async function logout() { await run(async()=>{const {error}=await db.auth.signOut();if(error) throw error;resetAuth();}); }
+async function reloadData() {
+  if(!profile || refreshing) return;
+  refreshing=true;
+  try {
+    const next=new Map();
+    for(let from=0;;from+=1000) {
+      const {data,error}=await db.from('ugec_documents').select('*').order('kind').order('id').range(from,from+999);
+      if(error) throw error;
+      for(const row of data) next.set(key(row.kind,row.id),row);
+      if(data.length<1000) break;
+    }
+    const nextState=emptyState();
+    nextState.isMentor=profile.role==='mentor';nextState.currentUni=profile.team_id;
+    for(const row of next.values()) {
+      const data={...clean(row.kind,row.data),id:row.id};
+      if(row.kind==='settings') {if(row.id==='global') nextState.global={...nextState.global,...data};}
+      else nextState[row.kind==='teams'?'universities':row.kind].push(data);
+    }
+    rows=next;state=nextState;renderAll();
+    status('متصل • آخر تحديث '+new Date().toLocaleTimeString('ar-EG'));
+  } finally {refreshing=false;}
+}
+async function refreshData() { if(busy) return; await run(reloadData); }
+function requireMentor() { if(profile?.role!=='mentor') throw Error('هذه العملية متاحة للمشرف فقط.'); }
+async function put(kind,id,data,insertOnly=false) {
+  if(!/^[A-Za-z0-9_-]{1,100}$/.test(id)) throw Error('معرّف السجل غير صالح.');
+  const old=insertOnly?null:rows.get(key(kind,id));
+  const payload={kind,id,data:clean(kind,data),team_id:kind==='teams'?id:kind==='submissions'?data.uniId:null,version:old?old.version+1:1};
+  let query=old?db.from('ugec_documents').update(payload).eq('kind',kind).eq('id',id).eq('version',old.version):db.from('ugec_documents').insert(payload);
+  const {data:saved,error}=await query.select('id');
+  if(error) throw error;
+  if(!saved?.length) throw Error('السجل تغيّر أو الصلاحية غير كافية. حدّث البيانات ثم أعد فتح النموذج.');
+}
+async function commit(kind,id,data) {await put(kind,id,data);await reloadData();closeModals();}
+function externalURL(value) {
+  if(!value?.trim()) return '';
+  const url=new URL(value.trim());
+  if(!['https:','http:'].includes(url.protocol)) throw Error('استخدم رابط https أو http صالحًا.');
+  return url.href;
+}
+async function uploadFile(inputId,folder) {
+  const file=$(inputId).files[0]; if(!file) return null;
+  if(file.size>20*1024*1024) throw Error('الحد الأقصى للملف 20 ميجابايت. استخدم رابطًا خارجيًا للملفات الأكبر.');
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(!['pdf','dwg','dxf','zip','xlsx','xls','doc','docx','ppt','pptx','png','jpg','jpeg','txt','csv'].includes(ext)) throw Error('صيغة الملف غير مدعومة.');
+  const path=folder+'/'+uid()+'.'+ext;
+  const {error}=await db.storage.from(BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
+  if(error) throw error;
+  return {storagePath:path,fileName:file.name};
+}
+async function openFile(record,field='link') {
+  await run(async()=>{
+    let url;
+    if(record.storagePath) {
+      const {data,error}=await db.storage.from(BUCKET).createSignedUrl(record.storagePath,60,{download:record.fileName||true});
+      if(error) throw error;url=data.signedUrl;
+    } else url=externalURL(record[field]);
+    if(!url) throw Error('لا يوجد ملف أو رابط في هذا السجل.');
+    const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.click();
+  });
+}
+function saveSession(e) { e.preventDefault();return run(async()=>{
+  requireMentor();const id=$('sessionId').value||uid();const old=state.sessions.find(s=>s.id===id);
+  await commit('sessions',id,{title:$('sessionTitle').value,presenter:$('sessionPresenter').value,date:$('sessionDate').value,time:$('sessionTime').value,desc:$('sessionDesc').value,videoLink:old?.videoLink||''});
+}); }
+function saveSessionVideo(e) {e.preventDefault();return run(async()=>{
+  requireMentor();const id=$('sessionVideoId').value;const old=state.sessions.find(s=>s.id===id);if(!old) throw Error('السيشن غير موجودة.');
+  await commit('sessions',id,{...old,videoLink:externalURL($('sessionVideoLink').value)});
+});}
+function saveInput(e) {e.preventDefault();return run(async()=>{
+  requireMentor();const id=$('inputId').value||uid();const old=state.inputs.find(i=>i.id===id)||{};
+  const link=externalURL($('inputLink').value);
+  if($('inputFile').files[0] && link) throw Error('اختار ملفًا أو رابطًا خارجيًا، وليس الاثنين.');
+  const file=await uploadFile('inputFile','shared');
+  const obj={title:$('inputTitle').value,ref:$('inputRef').value,desc:$('inputDesc').value,link,...(file||(!link?{storagePath:old.storagePath||'',fileName:old.fileName||''}:{}))};
+  await commit('inputs',id,obj);
+});}
+function saveTask(e) {e.preventDefault();return run(async()=>{
+  requireMentor();const id=$('taskId').value||uid();const old=state.tasks.find(t=>t.id===id);
+  await commit('tasks',id,{title:$('taskTitle').value,desc:$('taskDesc').value,deadline:$('taskDeadline').value,format:$('taskFormat').value,createdAt:old?.createdAt||Date.now()});
+});}
+function submitTask(e) {e.preventDefault();return run(async()=>{
+  if(profile?.role!=='team') throw Error('تسجيل دخول الفريق مطلوب.');
+  const fileLink=externalURL($('submitFileLink').value);
+  if($('submitFile').files[0] && fileLink) throw Error('اختار ملفًا أو رابطًا خارجيًا، وليس الاثنين.');
+  const file=await uploadFile('submitFile',profile.team_id);
+  if(!file && !fileLink) throw Error('اختر ملفًا أو أدخل رابط تسليم صالحًا.');
+  await commit('submissions',uid(),{taskId:$('submitTaskId').value,uniId:profile.team_id,rev:$('submitRev').value,fileName:file?.fileName||$('submitFileName').value,fileLink,...(file||{}),notes:$('submitNotes').value,status:'under_review',score:'',major:'',minor:'',date:new Date().toISOString()});
+});}
+function saveReview(e) {e.preventDefault();return run(async()=>{
+  requireMentor();const id=$('reviewSubId').value;const old=state.submissions.find(s=>s.id===id);if(!old) throw Error('التسليم غير موجود.');
+  const score=Number($('reviewScore').value);if(!Number.isFinite(score)||score<0||score>100) throw Error('التقييم من صفر إلى 100.');
+  await commit('submissions',id,{...old,score,status:$('reviewStatus').value,major:$('reviewMajor').value,minor:$('reviewMinor').value});
+});}
+function saveTeam(e) {e.preventDefault();return run(async()=>{
+  requireMentor();const id=$('teamId').value||uid();
+  const obj={name:$('teamUniName').value,group:$('teamGroup').value,members:$('teamMembers').value,coordinator:$('teamCoordinator').value,primaryEngineer:$('teamPrimaryEngineer').value,secondaryEngineer:$('teamSecondaryEngineer').value,advisor:$('teamAdvisor').value,progress:Number($('teamProgress').value)||0,score:Number($('teamScore').value)||0,project:$('teamProject').value};
+  if([obj.progress,obj.score].some(x=>x<0||x>100)) throw Error('النسبة والدرجة من صفر إلى 100.');
+  await commit('teams',id,obj);
+});}
+function saveGlobalSettings() {return run(async()=>{requireMentor();await commit('settings','global',{sessions:Number($('gsSessions').value)||0,tasks:Number($('gsTasks').value)||0,pending:Number($('gsPending').value)||0,progress:Number($('gsProgress').value)||0});});}
+async function removeRecord(kind,id) {
+  if(!confirm('حذف هذا السجل؟ لن تُحذف الملفات المخزنة تلقائيًا.')) return;
+  await run(async()=>{requireMentor();const old=rows.get(key(kind,id));if(!old) throw Error('السجل غير موجود.');
+    const {data,error}=await db.from('ugec_documents').delete().eq('kind',kind).eq('id',id).eq('version',old.version).select('id');
+    if(error) throw error;if(!data.length) throw Error('السجل تغيّر. حدّث الصفحة وأعد المحاولة.');await reloadData();
+  });
+}
+function deleteSession(id) {return removeRecord('sessions',id);}
+function deleteInput(id) {return removeRecord('inputs',id);}
+function deleteTask(id) {return removeRecord('tasks',id);}
+function exportLegacy() {
+  try {const raw=localStorage.getItem(STORAGE_KEY);if(!raw) throw Error('لا توجد بيانات قديمة في هذا المتصفح. افتح الموقع من المتصفح الذي استخدمته سابقًا.');JSON.parse(raw);downloadJSON(raw,'UGEC-private-legacy-backup.json');}
+  catch(err) {showError(err);}
+}
+function downloadJSON(raw,name) {const url=URL.createObjectURL(new Blob([raw],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function exportCloud() {requireMentor();downloadJSON(JSON.stringify(state,null,2),'UGEC-cloud-backup.json');}
+function importLegacy() {return run(async()=>{
+  requireMentor();const file=$('legacyImport').files[0];
+  const raw=file?await file.text():localStorage.getItem(STORAGE_KEY);
+  if(!raw) throw Error('لا توجد بيانات قديمة. اختر نسخة JSON أو استخدم المتصفح القديم.');
+  const legacy=JSON.parse(raw);
+  if(!legacy || !Array.isArray(legacy.universities) || !Array.isArray(legacy.tasks)) throw Error('صيغة النسخة غير صحيحة.');
+  if(!confirm('استيراد السجلات الناقصة فقط؟ السجلات الحالية لن تتغير. النسخة الأصلية قد تحتوي كلمات مرور قديمة؛ احتفظ بها خاصة.')) return;
+  const batch=[];
+  for(const kind of kinds) {
+    const records=kind==='settings'?[{id:'global',...(legacy.global||{})}]:(legacy[kind==='teams'?'universities':kind]||[]);
+    if(!Array.isArray(records)) throw Error('قسم غير صالح: '+kind);
+    for(const item of records) {
+      if(!item || !/^[A-Za-z0-9_-]{1,100}$/.test(item.id||'')) throw Error('معرّف غير صالح في '+kind);
+      const data=clean(kind,item);
+      for(const field of ['link','fileLink','videoLink']) if(data[field]) data[field]=externalURL(data[field]);
+      if(kind==='submissions' && (!data.uniId||!data.taskId)) throw Error('تسليم بدون معرّف فريق أو تاسك.');
+      batch.push({kind,id:item.id,data});
+    }
   }
-  const modal = document.createElement('div');
-  modal.className = 'ugec-modal';
-  modal.innerHTML = `
-    <div class="ugec-modal-backdrop" onclick="this.parentElement.remove()"></div>
-    <div class="ugec-modal-content max-w-md">
-      <div class="flex items-center justify-between mb-4">
-        <div class="font-bold">تفاصيل تصحيح التاسك</div>
-        <button onclick="this.closest('.ugec-modal').remove()"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="space-y-3 text-sm">
-        <div class="flex items-center justify-between"><span class="text-slate-400">عنوان التاسك</span><span>${t ? t.title : '-'}</span></div>
-        <div class="flex items-center justify-between"><span class="text-slate-400">رقم الإصدار</span><span>${s.rev || '-'}</span></div>
-        <div class="flex items-center justify-between"><span class="text-slate-400">الحالة</span><span class="${s.status === 'approved' ? 'text-emerald-400' : s.status === 'revision' ? 'text-amber-400' : 'text-sky-300'}">${statusText(s.status)}</span></div>
-        <div class="flex items-center justify-between"><span class="text-slate-400">الدرجة</span><span class="font-bold ${score >= 70 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-red-400'}">${s.score || '-'} / 100</span></div>
-        <div class="border-t border-ugec-border pt-3 space-y-2">
-          <div class="text-slate-300">الملاحظات الرئيسية</div>
-          <div class="text-slate-400 whitespace-pre-wrap">${s.major || '-'}</div>
-        </div>
-        <div class="space-y-2">
-          <div class="text-slate-300">الملاحظات الفرعية</div>
-          <div class="text-slate-400 whitespace-pre-wrap">${s.minor || '-'}</div>
-        </div>
-        ${extra}
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
+  // Validate the entire snapshot before creating any records. Keep credentials out.
+  let imported=0,skipped=0;
+  try {
+    for(const item of batch) {
+      if(rows.has(key(item.kind,item.id))) {skipped++;continue;}
+      await put(item.kind,item.id,item.data,true);imported++;
+    }
+  } catch(err) {throw Error('تم حفظ '+imported+' سجل قبل توقف الاستيراد. حدّث البيانات ثم أعد الاستيراد لتكملة الناقص. '+errorText(err));}
+  finally {await reloadData();}
+  alert('تم استيراد '+imported+' سجل وتجاوز '+skipped+' سجل موجود. كلمات المرور القديمة لم تُنقل؛ أنشئ الحسابات الجديدة حسب accounts.sql.');
+});}
+// Plain text nodes and event listeners prevent stored data from becoming HTML/code.
+function node(tag,text,cls='') {const el=document.createElement(tag);if(text!==undefined)el.textContent=text;el.className=cls;return el;}
+function button(text,action) {const b=node('button',text,'ugec-chip');b.type='button';b.addEventListener('click',action);return b;}
+function list(id,items,render) {const target=$(id);target.replaceChildren();items.forEach((x,i)=>target.append(render(x,i)));if(!items.length)target.append(node('p','لا توجد بيانات بعد.','text-sm text-slate-400'));}
+function card(title,lines=[],actions=[]) {const c=node('div',undefined,'ugec-card rounded-2xl p-4 space-y-2');c.append(node('div',title,'font-bold'));lines.forEach(t=>c.append(node('div',t,'text-sm text-slate-400 whitespace-pre-wrap')));const a=node('div',undefined,'flex flex-wrap gap-2');actions.forEach(b=>a.append(b));c.append(a);return c;}
+function latestSub(taskId) {return state.submissions.filter(s=>s.taskId===taskId&&s.uniId===state.currentUni).sort((a,b)=>(Date.parse(b.date)||Number(b.id.replace(/\D/g,''))||0)-(Date.parse(a.date)||Number(a.id.replace(/\D/g,''))||0))[0];}
+function statusText(s) {return s==='approved'?'معتمد':s==='revision'?'يحتاج تعديل':'تحت المراجعة';}
+function dateText(s) {if(!s)return '-';const d=new Date(s);return Number.isNaN(d.getTime())?s:d.toLocaleString('ar-EG');}
+function taskActions(t) {
+  if(state.isMentor) return [button('تعديل',()=>openAddTaskModal(t.id)),button('حذف',()=>deleteTask(t.id))];
+  if(!state.currentUni) return [];
+  const sub=latestSub(t.id);const actions=[];
+  if(sub) actions.push(button(statusText(sub.status)+' • '+(sub.score===''?'لم يقيّم':sub.score+'/100'),()=>showTaskResult(sub.id)));
+  if(!sub||sub.status==='revision') actions.push(button(sub?'رفع إصدار جديد':'رفع التسليم',()=>openSubmitModal(t.id)));
+  return actions;
 }
-
+function renderTasks() {list('tasksList',state.tasks.slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)),(t,i)=>card('تاسك '+(i+1)+': '+t.title,[t.desc||'', 'الموعد: '+(t.deadline||'-'),'الصيغة: '+(t.format||'-')],taskActions(t)));}
+function sessionCard(s) {const actions=[];if(s.videoLink) actions.push(button('مشاهدة الفيديو',()=>openFile(s,'videoLink')));if(state.isMentor)actions.push(button('تعديل',()=>openAddSessionModal(s.id)),button('رابط الفيديو',()=>openSessionVideoModal(s.id)),button('حذف',()=>deleteSession(s.id)));return card(s.title,[s.presenter||'',(s.date||'')+' '+(s.time||''),s.desc||''],actions);}
+function renderSessions() {list('sessionsList',state.sessions,sessionCard);}
+function renderInputs() {list('inputsList',state.inputs,i=>{const actions=[];if(i.link||i.storagePath)actions.push(button('تنزيل / فتح الملف',()=>openFile(i)));if(state.isMentor)actions.push(button('تعديل',()=>openAddInputModal(i.id)),button('حذف',()=>deleteInput(i.id)));return card(i.title+(i.ref?' • '+i.ref:''),[i.desc||'',i.fileName||''],actions);});}
+function renderReviews() {list('reviewsList',state.isMentor?state.submissions:[],s=>{const t=state.tasks.find(t=>t.id===s.taskId);const u=state.universities.find(u=>u.id===s.uniId);const actions=[button('تقييم / تعديل التقييم',()=>openReview(s.id))];if(s.fileLink||s.storagePath)actions.push(button('تنزيل التسليم',()=>openFile(s,'fileLink')));return card((u?.name||s.uniId)+' • '+(t?.title||'تاسك محذوف'),['الإصدار: '+s.rev+' • '+dateText(s.date),'الملف: '+(s.fileName||'-'),s.notes||'',statusText(s.status)+' • الدرجة: '+(s.score??'-')],actions);});}
+function teamCard(u) {return card(u.name+' '+(u.group||''),['معرّف الفريق: '+u.id,'المشروع: '+(u.project||'-'),'الأعضاء:\n'+(u.members||'-'),'Project Coordinator: '+(u.coordinator||'-'),'Primary Engineer: '+(u.primaryEngineer||'-'),'Secondary Engineer: '+(u.secondaryEngineer||'-'),'الإنجاز: '+(u.progress||0)+'% • التقييم: '+(u.score||0)+'/100'],state.isMentor?[button('تعديل',()=>openAddTeamModal(u.id))]:[]);}
+function renderTeams() {list('teamsList',state.universities,teamCard);}
+function average(id) {const scores=state.submissions.filter(s=>s.uniId===id&&s.score!==''&&s.score!=null).map(s=>Number(s.score));return scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;}
 function renderDashboard() {
-  const dashTasks = $('dashTasks');
-  
-  if (!state.isMentor && state.currentUni) {
-    const myUniId = state.currentUni;
-    const tasksOrdered = [...state.tasks].sort((a, b) => {
-      const da = a.createdAt || 0;
-      const db = b.createdAt || 0;
-      return da - db;
-    });
-    dashTasks.innerHTML = tasksOrdered.map((t, idx) => {
-      const mySub = state.submissions.find(s => s.taskId === t.id && s.uniId === myUniId);
-      let btn = '';
-      if (mySub && mySub.score !== '' && mySub.score !== null && mySub.score !== undefined) {
-        btn = `<button onclick="showTaskResult('${mySub.id}')"><span class="ugec-chip green">إظهار النتيجة</span></button>`;
-      } else if (mySub) {
-        btn = `<span class="ugec-chip amber">قيد المراجعة</span>`;
-      } else {
-        btn = `<button onclick="openSubmitModal('${t.id}')"><span class="ugec-chip amber">رفع التسليم</span></button>`;
-      }
-      return `
-        <div class="list-row">
-          <div class="flex-1">
-            <div class="flex items-center justify-between gap-2">
-              <div class="font-semibold text-sm">تاسك ${idx + 1}: ${t.title}</div>
-              <span class="ugec-chip">صيغة: ${t.format || '-'}</span>
-            </div>
-            <div class="text-xs text-slate-400 mt-1">الموعد النهائي: ${t.deadline ? t.deadline.replace('T', ' ') : '-'}</div>
-          </div>
-          <div class="flex items-center gap-2">${btn}</div>
-        </div>
-      `;
-    }).join('') || '<div class="text-sm text-slate-500">لا توجد تاسكات</div>';
-  } else {
-    dashTasks.innerHTML = state.tasks.slice().sort((a, b) => {
-      const da = a.createdAt || 0;
-      const db = b.createdAt || 0;
-      return da - db;
-    }).slice(0, 4).map((t, idx) => `
-      <div class="list-row">
-        <div>
-          <div class="font-semibold text-sm">تاسك ${idx + 1}: ${t.title}</div>
-          <div class="text-xs text-slate-400">الموعد النهائي: ${t.deadline ? t.deadline.replace('T', ' ') : '-'}</div>
-        </div>
-        <span class="ugec-chip">صيغة: ${t.format || '-'}</span>
-      </div>
-    `).join('') || '<div class="text-sm text-slate-500">لا توجد تاسكات</div>';
-  }
-
-  const dashSessions = $('dashSessions');
-  dashSessions.innerHTML = state.sessions.slice(0, 3).map(s => {
-    let videoBtn = '';
-    if (state.isMentor) {
-      videoBtn = `<button onclick="openSessionVideoModal('${s.id}')"><span class="ugec-chip">${s.videoLink ? 'تعديل فيديو السيشن' : 'رفع فيديو السيشن'}</span></button>`;
-    } else if (state.currentUni && s.videoLink) {
-      videoBtn = `<button onclick="openSessionVideo('${s.videoLink.replace(/'/g, "\\'")}')"><span class="ugec-chip green">مشاهدة فيديو السيشن</span></button>`;
-    }
-    return `
-      <div class="list-row">
-        <div class="flex-1">
-          <div class="font-semibold text-sm">${s.title}</div>
-          <div class="text-xs text-slate-400">${s.presenter} | ${s.date} ${s.time || ''}</div>
-        </div>
-        <div class="flex items-center gap-2">${videoBtn}</div>
-      </div>
-    `;
-  }).join('') || '<div class="text-sm text-slate-500">لا توجد سيشنات</div>';
-
-  const dashRightTitle = $('dashRightTitle');
-  const dashTeams = $('dashTeams');
-  const dashRanking = $('dashRanking');
-
-  if (state.isMentor) {
-    if (dashRightTitle) dashRightTitle.textContent = 'تصنيف أفضل المجموعات';
-    if (dashTeams) dashTeams.classList.add('hidden');
-    if (dashRanking) {
-      dashRanking.classList.remove('hidden');
-      const ranking = [...state.universities].map(u => ({
-        ...u,
-        avg: getCumulativeScore(u.id)
-      })).sort((a, b) => b.avg - a.avg);
-      dashRanking.innerHTML = ranking.map((u, idx) => `
-        <div class="flex items-center justify-between text-sm border-b border-ugec-border last:border-0 pb-2 last:pb-0">
-          <div class="flex items-center gap-2">
-            <span class="w-5 text-center ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-700' : 'text-slate-500'} font-bold">${idx + 1}</span>
-            <div>
-              <div class="font-semibold">${u.name} ${u.group || ''}</div>
-              <div class="text-[10px] text-slate-500">${u.project || ''}</div>
-            </div>
-          </div>
-          <div class="text-right">
-            <div class="font-bold ${u.avg >= 90 ? 'text-emerald-400' : u.avg >= 80 ? 'text-sky-300' : u.avg >= 70 ? 'text-amber-400' : 'text-slate-300'}">${u.avg.toFixed(1)}</div>
-            <div class="text-[10px] text-slate-500">متوسط تقييم</div>
-          </div>
-        </div>
-      `).join('') || '<div class="text-sm text-slate-500">لا توجد تقييمات بعد</div>';
-    }
-  } else {
-    if (dashRightTitle) dashRightTitle.textContent = 'الجامعات المشاركة';
-    if (dashTeams) {
-      dashTeams.classList.remove('hidden');
-      let teamsToShow = state.universities;
-      if (!state.isMentor && state.currentUni) {
-        teamsToShow = state.universities.filter(u => u.id === state.currentUni);
-      }
-      dashTeams.innerHTML = teamsToShow.map(u => `
-        <div class="border-b border-ugec-border last:border-0 pb-2 last:pb-0">
-          <div class="flex items-center justify-between text-sm">
-            <div class="font-semibold">${u.name} ${u.group || ''}</div>
-            <span class="text-slate-400">${u.progress}%</span>
-          </div>
-          <div class="mt-2 text-xs text-slate-300">أعضاء الفريق:</div>
-          <div class="mt-1 text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">${u.members && u.members.trim() ? u.members.replace(/،/g, '\n').replace(/,/g, '\n') : '-'}</div>
-        </div>
-      `).join('') || '<div class="text-sm text-slate-500">لا توجد بيانات</div>';
-    }
-    if (dashRanking) dashRanking.classList.add('hidden');
-  }
-
-  const dashSupervisors = $('dashSupervisors');
-  const supList = [];
-  if (state.isMentor) {
-    state.universities.forEach(u => {
-      if (u.coordinator || u.primaryEngineer || u.secondaryEngineer) {
-        supList.push({ uni: u, coord: u.coordinator, pri: u.primaryEngineer, sec: u.secondaryEngineer });
-      }
-    });
-    dashSupervisors.innerHTML = supList.map(s => `
-      <div class="border-b border-ugec-border last:border-0 pb-2 last:pb-0 space-y-1">
-        <div class="text-sm font-semibold">${s.uni.name} ${s.uni.group || ''}</div>
-        <div class="text-xs text-slate-400">Project Coordinator : <span class="text-sky-300">${s.coord || '-'}</span></div>
-        <div class="text-xs text-slate-400">Primary Engineer : <span class="text-sky-300">${s.pri || '-'}</span></div>
-        <div class="text-xs text-slate-400">Secondary Engineer : <span class="text-sky-300">${s.sec || '-'}</span></div>
-      </div>
-    `).join('') || '<div class="text-sm text-slate-500">يتم تحديدهم من إعدادات الفرق</div>';
-  } else if (state.currentUni) {
-    const u = state.universities.find(x => x.id === state.currentUni);
-    if (u && (u.coordinator || u.primaryEngineer || u.secondaryEngineer)) {
-      dashSupervisors.innerHTML = `
-        <div class="space-y-1">
-          <div class="text-xs text-slate-400">Project Coordinator : <span class="text-sky-300">${u.coordinator || '-'}</span></div>
-          <div class="text-xs text-slate-400">Primary Engineer : <span class="text-sky-300">${u.primaryEngineer || '-'}</span></div>
-          <div class="text-xs text-slate-400">Secondary Engineer : <span class="text-sky-300">${u.secondaryEngineer || '-'}</span></div>
-        </div>
-      `;
-    } else {
-      dashSupervisors.innerHTML = '<div class="text-sm text-slate-500">يتم تحديدهم من إعدادات الفرق</div>';
-    }
-  } else {
-    dashSupervisors.innerHTML = '<div class="text-sm text-slate-500">يتم تحديدهم من إعدادات الفرق</div>';
-  }
+  list('dashTasks',state.tasks,t=>card(t.title,[t.deadline||''],taskActions(t)));
+  list('dashSessions',state.sessions.slice(0,3),sessionCard);
+  $('dashRightTitle').textContent=state.isMentor?'تصنيف المجموعات':'فريقك';
+  $('dashRanking').classList.toggle('hidden',!state.isMentor);$('dashTeams').classList.toggle('hidden',state.isMentor);
+  list('dashRanking',state.isMentor?state.universities.slice().sort((a,b)=>average(b.id)-average(a.id)):[],u=>card(u.name,[average(u.id).toFixed(1)+'/100']));
+  list('dashTeams',state.isMentor?[]:state.universities,teamCard);
+  list('dashSupervisors',state.universities,u=>card(u.name,[u.coordinator||'-',u.primaryEngineer||'-',u.secondaryEngineer||'-']));
 }
+function renderReport() {
+  const table=node('table',undefined,'table-ugec');const head=node('tr');['الجامعة','الفريق','المشروع','الإنجاز','التقييم'].forEach(x=>head.append(node('th',x)));const thead=node('thead');thead.append(head);table.append(thead);const body=node('tbody');state.universities.forEach(u=>{const r=node('tr');[u.name,u.group||'-',u.project||'-',(u.progress||0)+'%',(u.score||0)+'/100'].forEach(x=>r.append(node('td',x)));body.append(r);});table.append(body);$('reportContent').replaceChildren(table);
+}
+function updateStats() {['Sessions','Tasks','Pending','Progress'].forEach(s=>$('stat'+s).textContent=state.global[s.toLowerCase()]||0);}
+function renderAll() {updateStats();renderDashboard();renderSessions();renderInputs();renderTasks();renderReviews();renderTeams();renderReport();}
+function showTaskResult(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;const modal=$('resultModal');const t=state.tasks.find(t=>t.id===s.taskId);$('resultContent').replaceChildren(card(t?.title||'نتيجة التسليم',['الإصدار: '+s.rev,'الحالة: '+statusText(s.status),'الدرجة: '+(s.score===''?'لم يقيّم':s.score+'/100'),'ملاحظات رئيسية: '+(s.major||'-'),'ملاحظات فرعية: '+(s.minor||'-')],(s.storagePath||s.fileLink)?[button('تنزيل التسليم',()=>openFile(s,'fileLink'))]:[]));closeModals();modal.classList.remove('hidden');}
+function openGlobalSettings() {requireMentor();closeModals();['Sessions','Tasks','Pending','Progress'].forEach(s=>$('gs'+s).value=state.global[s.toLowerCase()]||0);$('globalSettingsModal').classList.remove('hidden');}
+function openReview(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;closeModals();$('reviewSubId').value=id;$('reviewScore').value=s.score??'';$('reviewStatus').value=s.status;$('reviewMajor').value=s.major||'';$('reviewMinor').value=s.minor||'';$('reviewModal').classList.remove('hidden');}
 
 function openAddSessionModal(id = null) {
   closeModals();
@@ -505,62 +296,6 @@ function openAddSessionModal(id = null) {
   $('addSessionModal').classList.remove('hidden');
 }
 
-function pushNotif(text) {
-  if (!state.notifications) state.notifications = [];
-  state.notifications.unshift({ id: 'n' + Date.now(), text, date: new Date().toLocaleString('ar-EG') });
-  saveState();
-  updateNotif();
-}
-
-function updateNotif() {
-  if (!$('notifDot')) return;
-  const has = state.notifications && state.notifications.length && !state.isMentor ? true : false;
-  if (!state.isMentor && state.currentUni && has) {
-    $('notifDot').classList.remove('hidden');
-  } else {
-    $('notifDot').classList.add('hidden');
-  }
-}
-
-function openNotifications() {
-  closeModals();
-  const list = $('notificationsList');
-  if (!state.notifications || !state.notifications.length) {
-    list.innerHTML = '<div class="text-sm text-slate-500 text-center py-4">لا توجد إشعارات</div>';
-  } else {
-    list.innerHTML = state.notifications.map(n => `
-      <div class="list-row">
-        <div class="text-sm">${n.text}</div>
-        <div class="text-xs text-slate-500">${n.date}</div>
-      </div>
-    `).join('');
-    if (!state.isMentor) state.notifications = [];
-    saveState();
-    updateNotif();
-  }
-  $('notificationsModal').classList.remove('hidden');
-}
-
-function saveSession(e) {
-  e.preventDefault();
-  if (!state.isMentor) return;
-  const id = $('sessionId').value || 's' + Date.now();
-  const existing = state.sessions.find(x => x.id === id);
-  const obj = { 
-    id, 
-    title: $('sessionTitle').value, 
-    presenter: $('sessionPresenter').value, 
-    date: $('sessionDate').value, 
-    time: $('sessionTime').value, 
-    desc: $('sessionDesc').value,
-    videoLink: existing ? existing.videoLink : ''
-  };
-  const idx = state.sessions.findIndex(x => x.id === id);
-  if (idx >= 0) state.sessions[idx] = obj; else { state.sessions.push(obj); pushNotif('تم إضافة سيشن جديد: ' + obj.title); }
-  saveState();
-  closeModals();
-  renderAll();
-}
 
 function openSessionVideoModal(id) {
   if (!state.isMentor) return;
@@ -571,57 +306,10 @@ function openSessionVideoModal(id) {
   $('sessionVideoModal').classList.remove('hidden');
 }
 
-function saveSessionVideo(e) {
-  e.preventDefault();
-  if (!state.isMentor) return;
-  const id = $('sessionVideoId').value;
-  const idx = state.sessions.findIndex(x => x.id === id);
-  if (idx >= 0) {
-    state.sessions[idx].videoLink = $('sessionVideoLink').value.trim();
-    saveState();
-    closeModals();
-    renderAll();
-    alert('تم رفع رابط الفيديو بنجاح');
-  }
-}
-
-function openSessionVideo(link) {
-  if (!link) return;
-  window.open(link, '_blank');
-}
-
-function deleteSession(id) {
-  if (!state.isMentor) return;
-  if (!confirm('حذف السيشن؟')) return;
-  state.sessions = state.sessions.filter(x => x.id !== id);
-  saveState();
-  renderAll();
-}
-
-function renderSessions() {
-  const list = $('sessionsList');
-  list.innerHTML = state.sessions.map(s => {
-    let actions = '';
-    if (state.isMentor) {
-      actions = `<div class="flex items-center gap-2 flex-wrap"><button onclick="openSessionVideoModal('${s.id}')"><span class="ugec-chip">${s.videoLink ? 'تعديل فيديو السيشن' : 'رفع فيديو السيشن'}</span></button><button onclick="openAddSessionModal('${s.id}')"><span class="ugec-chip">تعديل</span></button><button onclick="deleteSession('${s.id}')"><span class="ugec-chip">حذف</span></button></div>`;
-    } else if (state.currentUni && s.videoLink) {
-      actions = `<button onclick="openSessionVideo('${s.videoLink.replace(/'/g, "\\'")}')"><span class="ugec-chip green">مشاهدة فيديو السيشن</span></button>`;
-    }
-    return `
-      <div class="list-row">
-        <div class="flex-1">
-          <div class="font-semibold">${s.title}</div>
-          <div class="text-xs text-slate-400">${s.presenter} | ${s.date} ${s.time || ''}</div>
-          <div class="text-xs text-slate-400">${s.desc || ''}</div>
-        </div>
-        ${actions}
-      </div>
-    `;
-  }).join('') || '<div class="text-sm text-slate-500">لا توجد سيشنات</div>';
-}
 
 function openAddInputModal(id = null) {
   closeModals();
+  $('inputFile').value='';
   $('inputId').value = id || '';
   if (id) {
     const x = state.inputs.find(i => i.id === id);
@@ -634,51 +322,6 @@ function openAddInputModal(id = null) {
   $('addInputModal').classList.remove('hidden');
 }
 
-function saveInput(e) {
-  e.preventDefault();
-  if (!state.isMentor) return;
-  const id = $('inputId').value || 'i' + Date.now();
-  const obj = { id, title: $('inputTitle').value, ref: $('inputRef').value, desc: $('inputDesc').value, link: $('inputLink').value };
-  const idx = state.inputs.findIndex(x => x.id === id);
-  if (idx >= 0) state.inputs[idx] = obj; else { state.inputs.push(obj); pushNotif('تم إضافة مدخل فني جديد: ' + obj.title); }
-  saveState();
-  closeModals();
-  renderAll();
-}
-
-function deleteInput(id) {
-  if (!state.isMentor) return;
-  if (!confirm('حذف المدخل الفني؟')) return;
-  state.inputs = state.inputs.filter(x => x.id !== id);
-  saveState();
-  renderAll();
-}
-
-function openInputFile(link) {
-  if (!link) return;
-  window.open(link, '_blank');
-}
-
-function renderInputs() {
-  const list = $('inputsList');
-  list.innerHTML = state.inputs.map(i => {
-    let action = '';
-    if (state.isMentor) {
-      action = `<div class="flex items-center gap-2"><button onclick="openAddInputModal('${i.id}')"><span class="ugec-chip">تعديل</span></button><button onclick="deleteInput('${i.id}')"><span class="ugec-chip">حذف</span></button></div>`;
-    } else if (state.currentUni && i.link) {
-      action = `<button onclick="openInputFile('${i.link.replace(/'/g, "\\'")}')"><span class="ugec-chip green">فتح الملف</span></button>`;
-    }
-    return `
-      <div class="list-row">
-        <div class="flex-1">
-          <div class="font-semibold">${i.title} ${i.ref ? '(' + i.ref + ')' : ''}</div>
-          <div class="text-xs text-slate-400">${i.desc || ''}</div>
-        </div>
-        ${action}
-      </div>
-    `;
-  }).join('') || '<div class="text-sm text-slate-500">لا توجد مدخلات فنية</div>';
-}
 
 function openAddTaskModal(id = null) {
   closeModals();
@@ -694,29 +337,10 @@ function openAddTaskModal(id = null) {
   $('addTaskModal').classList.remove('hidden');
 }
 
-function saveTask(e) {
-  e.preventDefault();
-  if (!state.isMentor) return;
-  const id = $('taskId').value || 't' + Date.now();
-  const obj = { id, title: $('taskTitle').value, desc: $('taskDesc').value, deadline: $('taskDeadline').value, format: $('taskFormat').value, createdAt: Date.now() };
-  const idx = state.tasks.findIndex(x => x.id === id);
-  if (idx >= 0) state.tasks[idx] = obj; else { state.tasks.push(obj); pushNotif('تم إضافة تاسك جديد: ' + obj.title); }
-  saveState();
-  closeModals();
-  renderAll();
-}
-
-function deleteTask(id) {
-  if (!state.isMentor) return;
-  if (!confirm('حذف التاسك؟')) return;
-  state.tasks = state.tasks.filter(x => x.id !== id);
-  state.submissions = state.submissions.filter(x => x.taskId !== id);
-  saveState();
-  renderAll();
-}
 
 function openSubmitModal(id) {
   closeModals();
+  $('submitFile').value='';
   $('submitTaskId').value = id;
   $('submitRev').value = '';
   $('submitFileName').value = '';
@@ -725,159 +349,17 @@ function openSubmitModal(id) {
   $('submitTaskModal').classList.remove('hidden');
 }
 
-function submitTask(e) {
-  e.preventDefault();
-  if (state.isMentor) return;
-  if (!state.currentUni) return;
-  const obj = {
-    id: 'sub' + Date.now(),
-    taskId: $('submitTaskId').value,
-    uniId: state.currentUni,
-    rev: $('submitRev').value,
-    fileName: $('submitFileName').value,
-    fileLink: $('submitFileLink').value,
-    notes: $('submitNotes').value || '',
-    status: 'under_review',
-    score: '',
-    major: '',
-    minor: '',
-    date: new Date().toLocaleDateString('ar-EG')
-  };
-  state.submissions.push(obj);
-  saveState();
-  closeModals();
-  renderAll();
-}
-
-function renderTasks() {
-  const list = $('tasksList');
-  const tasksOrdered = [...state.tasks].sort((a, b) => {
-    const da = a.createdAt || 0;
-    const db = b.createdAt || 0;
-    return da - db;
-  });
-  list.innerHTML = tasksOrdered.map((t, idx) => {
-    const mySub = state.submissions.find(s => s.taskId === t.id && s.uniId === state.currentUni);
-    let actionBtn = '';
-    if (!state.isMentor && state.currentUni) {
-      if (mySub && mySub.score !== '' && mySub.score !== null && mySub.score !== undefined) {
-        actionBtn = `<button onclick="showTaskResult('${mySub.id}')"><span class="ugec-chip green">إظهار النتيجة</span></button>`;
-      } else if (mySub) {
-        actionBtn = `<span class="ugec-chip amber">قيد المراجعة</span>`;
-      } else {
-        actionBtn = `<button onclick="openSubmitModal('${t.id}')"><span class="ugec-chip amber">رفع التسليم</span></button>`;
-      }
-    } else if (state.isMentor) {
-      actionBtn = `<div class="flex items-center gap-2"><button onclick="openAddTaskModal('${t.id}')"><span class="ugec-chip">تعديل</span></button><button onclick="deleteTask('${t.id}')"><span class="ugec-chip">حذف</span></button></div>`;
-    }
-    return `
-      <div class="list-row">
-        <div class="flex-1">
-          <div class="font-semibold">تاسك ${idx + 1}: ${t.title}</div>
-          <div class="text-xs text-slate-400">${t.desc || ''}</div>
-          <div class="text-xs text-slate-400">الموعد النهائي: ${t.deadline ? t.deadline.replace('T', ' ') : '-'}</div>
-          <div class="text-xs text-slate-400">صيغة التسليم: ${t.format || '-'}</div>
-        </div>
-        <div class="flex items-center gap-2">
-          ${actionBtn}
-        </div>
-      </div>
-    `;
-  }).join('') || '<div class="text-sm text-slate-500">لا توجد تاسكات</div>';
-}
-
-function statusText(s) {
-  if (s === 'approved') return 'معتمد';
-  if (s === 'revision') return 'يحتاج تعديل';
-  return 'تحت المراجعة';
-}
-
-function renderReviews() {
-  if (!state.isMentor) { $('reviewsList').innerHTML = '<div class="text-sm text-slate-500">خاص بالمشرف فقط</div>'; return; }
-  const list = $('reviewsList');
-  if (!state.submissions || state.submissions.length === 0) {
-    list.innerHTML = '<div class="text-sm text-slate-500">لا توجد تسليمات</div>';
-    return;
-  }
-  const groups = {};
-  state.submissions.forEach(sub => {
-    if (!groups[sub.uniId]) groups[sub.uniId] = [];
-    groups[sub.uniId].push(sub);
-  });
-  const html = Object.keys(groups).map(uniId => {
-    const u = state.universities.find(x => x.id === uniId);
-    const subs = groups[uniId];
-    return `
-      <div class="ugec-card rounded-2xl p-4 space-y-2">
-        <div class="flex items-center justify-between">
-          <div class="font-bold">${u ? u.name + (u.group ? ' - ' + u.group : '') : 'جامعة غير محددة'}</div>
-          <span class="ugec-chip">${subs.length} تسليم</span>
-        </div>
-        <div class="space-y-2">
-          ${subs.map(sub => {
-            const t = state.tasks.find(x => x.id === sub.taskId);
-            const isEvaluated = sub.score !== '' && sub.score !== null && sub.score !== undefined;
-            return `
-              <div class="list-row">
-                <div class="flex-1">
-                  <div class="font-semibold">${t ? t.title : 'تاسك غير معروف'}</div>
-                  <div class="text-xs text-slate-400">إصدار: ${sub.rev} | اسم الملف: ${sub.fileName || sub.file || '-'} | ${sub.fileLink ? '<a href="'+sub.fileLink+'" target="_blank" class="text-sky-300">رابط الملف</a>' : ''} | ${sub.date}</div>
-                  <div class="text-xs text-slate-400">ملاحظات الفريق: ${sub.notes || '-'}</div>
-                  <div class="text-xs text-slate-400">الدرجة: ${sub.score || '-'} | الحالة: ${statusText(sub.status)}</div>
-                </div>
-                ${isEvaluated ? `<span class="ugec-chip green">تم التقييم</span>` : `<button onclick="openReview('${sub.id}')"><span class="ugec-chip amber">تقييم</span></button>`}
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
-  list.innerHTML = html;
-}
-
-function openReview(id) {
-  closeModals();
-  const s = state.submissions.find(x => x.id === id);
-  if (!s) return;
-  $('reviewSubId').value = s.id;
-  $('reviewScore').value = s.score || '';
-  $('reviewStatus').value = s.status || 'under_review';
-  $('reviewMajor').value = s.major || '';
-  $('reviewMinor').value = s.minor || '';
-  $('reviewModal').classList.remove('hidden');
-}
-
-function saveReview(e) {
-  e.preventDefault();
-  if (!state.isMentor) return;
-  const id = $('reviewSubId').value;
-  const idx = state.submissions.findIndex(x => x.id === id);
-  if (idx >= 0) {
-    state.submissions[idx].score = $('reviewScore').value;
-    state.submissions[idx].status = $('reviewStatus').value;
-    state.submissions[idx].major = $('reviewMajor').value;
-    state.submissions[idx].minor = $('reviewMinor').value;
-    const t = state.tasks.find(x => x.id === state.submissions[idx].taskId);
-    const status = state.submissions[idx].status;
-    const score = state.submissions[idx].score;
-    const stTxt = status === 'approved' ? 'معتمد' : status === 'revision' ? 'يحتاج تعديل' : 'تحت المراجعة';
-    pushNotif('تم تقييم تسليمك لتاسك: ' + (t ? t.title : '') + ' | الدرجة: ' + (score || '-') + '/100 | الحالة: ' + stTxt);
-    saveState();
-    closeModals();
-    renderAll();
-  }
-}
 
 function openAddTeamModal(id = null) {
+  requireMentor();
   closeModals();
+  $('teamIdentity').textContent = id ? 'معرّف الفريق: '+id : 'سيظهر معرّف الفريق بعد الحفظ. إنشاء حساب الدخول يتم من لوحة Supabase.';
   $('teamId').value = id || '';
   if (id) {
     const u = state.universities.find(x => x.id === id);
     if (u) {
       $('teamUniName').value = u.name;
       $('teamGroup').value = u.group || '';
-      $('teamPass').value = u.pass || '';
       $('teamMembers').value = u.members || '';
       $('teamCoordinator').value = u.coordinator || '';
       $('teamPrimaryEngineer').value = u.primaryEngineer || '';
@@ -889,101 +371,26 @@ function openAddTeamModal(id = null) {
     }
     $('teamModalTitle').textContent = 'تعديل فريق';
   } else {
-    $('teamUniName').value = ''; $('teamGroup').value = ''; $('teamPass').value = ''; $('teamMembers').value = ''; $('teamCoordinator').value = ''; $('teamPrimaryEngineer').value = ''; $('teamSecondaryEngineer').value = ''; $('teamAdvisor').value = ''; $('teamProgress').value = ''; $('teamScore').value = ''; $('teamProject').value = '';
+    $('teamUniName').value = ''; $('teamGroup').value = ''; $('teamMembers').value = ''; $('teamCoordinator').value = ''; $('teamPrimaryEngineer').value = ''; $('teamSecondaryEngineer').value = ''; $('teamAdvisor').value = ''; $('teamProgress').value = ''; $('teamScore').value = ''; $('teamProject').value = '';
     $('teamModalTitle').textContent = 'إضافة فريق';
   }
   $('teamModal').classList.remove('hidden');
 }
 
-function saveTeam(e) {
-  e.preventDefault();
-  if (!state.isMentor) return;
-  const id = $('teamId').value || 'u' + Date.now();
-  const obj = {
-    id,
-    name: $('teamUniName').value,
-    group: $('teamGroup').value,
-    pass: $('teamPass').value,
-    members: $('teamMembers').value,
-    coordinator: $('teamCoordinator').value,
-    primaryEngineer: $('teamPrimaryEngineer').value,
-    secondaryEngineer: $('teamSecondaryEngineer').value,
-    advisor: $('teamAdvisor').value,
-    progress: +$('teamProgress').value || 0,
-    score: +$('teamScore').value || 0,
-    project: $('teamProject').value
-  };
-  const idx = state.universities.findIndex(x => x.id === id);
-  if (idx >= 0) state.universities[idx] = obj; else state.universities.push(obj);
-  saveState();
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.tab-btn');if(!b)return;
+  document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+  document.querySelectorAll('.tab-pane').forEach(x=>x.classList.add('hidden'));$('tab-'+b.dataset.tab)?.classList.remove('hidden');
+});
+setInterval(()=>{if(profile&&!busy&&!refreshing&&!document.hidden&&!document.querySelector('.ugec-modal:not(.hidden)'))reloadData().catch(err=>status('تعذر تحديث البيانات: '+errorText(err),true));},60000);
+window.addEventListener('offline',()=>status('الاتصال مقطوع. البيانات المعروضة آخر نسخة محمّلة؛ الحفظ يحتاج الإنترنت.',true));
+window.addEventListener('online',()=>{if(profile)refreshData();});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initData);else initData();
+
+function openNotifications() {
   closeModals();
-  renderAll();
-}
-
-function renderTeams() {
-  const list = $('teamsList');
-  let teamsToShow = state.universities;
-  if (!state.isMentor && state.currentUni) {
-    teamsToShow = state.universities.filter(u => u.id === state.currentUni);
-  }
-  list.innerHTML = teamsToShow.map(u => {
-    const isMine = !state.isMentor && state.currentUni === u.id;
-    const blur = !state.isMentor && !isMine ? 'filter blur-sm select-none pointer-events-none' : '';
-    const overlay = !state.isMentor && !isMine ? '<div class="absolute inset-0 bg-slate-950/40"></div>' : '';
-    return `
-    <div class="ugec-card rounded-2xl p-4 space-y-2 relative overflow-hidden ${blur} transition">
-      ${overlay}
-      <div class="relative flex items-center justify-between">
-        <div class="font-bold">${u.name} ${u.group ? '- ' + u.group : ''}</div>
-        ${state.isMentor ? `<button onclick="openAddTeamModal('${u.id}')"><span class="ugec-chip">تعديل</span></button>` : isMine ? `<span class="ugec-chip amber">جامعتك</span>` : ''}
-      </div>
-      <div class="relative text-xs text-slate-400">عنوان المشروع: ${u.project || '-'}</div>
-      <div class="relative text-xs text-slate-300">أعضاء الفريق:</div>
-      <div class="relative text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">${u.members && u.members.trim() ? u.members.replace(/،/g, '\n').replace(/,/g, '\n') : '-'}</div>
-      <div class="relative text-xs text-slate-300 mt-2">لجنة المتابعة</div>
-      <div class="relative text-xs text-slate-400 space-y-1">
-        <div>Project Coordinator : <span class="text-sky-300">${u.coordinator || '-'}</span></div>
-        <div>Primary Engineer : <span class="text-sky-300">${u.primaryEngineer || '-'}</span></div>
-        <div>Secondary Engineer : <span class="text-sky-300">${u.secondaryEngineer || '-'}</span></div>
-      </div>
-      <div class="relative flex items-center gap-4 text-xs">
-        <div>نسبة الإنجاز: <span class="text-sky-300">${u.progress}%</span></div>
-        <div>التقييم الكلي: <span class="text-amber-400">${u.score}/100</span></div>
-      </div>
-    </div>
-  `;
-  }).join('');
-}
-
-function renderReport() {
-  const rep = $('reportContent');
-  if (!state.currentUni && !state.isMentor) { rep.innerHTML = '<div class="text-sm text-slate-500">يرجى تسجيل الدخول</div>'; return; }
-  let list = state.universities;
-  if (!state.isMentor && state.currentUni) list = state.universities.filter(u => u.id === state.currentUni);
-  rep.innerHTML = `
-    <table class="table-ugec">
-      <thead>
-        <tr>
-          <th>الجامعة</th>
-          <th>الفريق</th>
-          <th>عنوان المشروع</th>
-          <th>لجنة المتابعة</th>
-          <th>نسبة الإنجاز</th>
-          <th>التقييم الكلي</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${list.map(u => `
-          <tr>
-            <td>${u.name}</td>
-            <td>${u.group || '-'}</td>
-            <td>${u.project || '-'}</td>
-            <td>Project Coordinator : ${u.coordinator || '-'}<br>Primary Engineer : ${u.primaryEngineer || '-'}<br>Secondary Engineer : ${u.secondaryEngineer || '-'}</td>
-            <td>${u.progress}%</td>
-            <td>${u.score}/100</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
+  const notices=[...rows.values()].filter(r=>['sessions','inputs','tasks','submissions'].includes(r.kind)).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)).slice(0,20);
+  list('notificationsList',notices,r=>card(r.data.title||'تحديث تسليم • '+(r.data.rev||''),[dateText(r.updated_at),r.kind==='submissions'?statusText(r.data.status):'تم تحديث بيانات المنصة']));
+  $('notificationsModal').classList.remove('hidden');
 }

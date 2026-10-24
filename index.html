@@ -67,6 +67,7 @@
           <i class="fa-solid fa-shield-halved text-amber-400"></i>
           <span id="activeRoleLabel">بوابة الجامعات</span>
         </div>
+        <button id="refreshBtn" class="hidden ugec-chip" onclick="refreshData()">تحديث البيانات</button>
         <button onclick="logout()" class="hidden" id="logoutBtn">
           <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ugec-border text-slate-300 text-xs hover:text-white transition">
             <i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج
@@ -76,6 +77,7 @@
     </div>
   </header>
 
+  <div id="cloudStatus" role="status" aria-live="polite" class="fixed top-16 inset-x-0 z-40 bg-slate-950 text-center text-xs py-2 px-4">جاري الاتصال…</div>
   <!-- Auth Gate -->
   <main id="authGate" class="min-h-screen relative overflow-hidden flex items-center justify-center px-4 pt-16">
     <div class="absolute inset-0 -z-10">
@@ -302,10 +304,11 @@
         <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <form onsubmit="loginMentor(event)" class="space-y-3">
-        <input id="mentorPass" type="password" class="ugec-input" placeholder="كلمة المرور" required>
+        <input id="mentorEmail" type="email" autocomplete="username" class="ugec-input" placeholder="البريد الإلكتروني للمشرف" required>
+        <input id="mentorPass" autocomplete="current-password" type="password" class="ugec-input" placeholder="كلمة المرور" required>
         <button class="ugec-btn-primary w-full justify-center">دخول</button>
       </form>
-      <p class="text-[10px] text-slate-500 mt-2 text-center">كلمة المرور الافتراضية: ugec@2027</p>
+      <p class="text-xs text-slate-400 mt-2">استخدم حساب Supabase Auth الذي أعدّه مسؤول المنصة.</p>
     </div>
   </div>
 
@@ -318,8 +321,8 @@
         <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <form onsubmit="loginUni(event)" class="space-y-3">
-        <select id="uniSelect" class="ugec-input"></select>
-        <input id="uniPass" type="password" class="ugec-input" placeholder="كلمة مرور الفريق" required>
+        <input id="uniEmail" type="email" autocomplete="username" class="ugec-input" placeholder="البريد الإلكتروني للطالب / الفريق" required>
+        <input id="uniPass" autocomplete="current-password" type="password" class="ugec-input" placeholder="كلمة مرور الفريق" required>
         <button class="ugec-btn-primary w-full justify-center">دخول</button>
       </form>
     </div>
@@ -377,7 +380,9 @@
         <input id="inputTitle" class="ugec-input" placeholder="عنوان المدخل الفني" required>
         <input id="inputRef" class="ugec-input" placeholder="رقم المرجع / الكود (اختياري)">
         <textarea id="inputDesc" class="ugec-input h-24" placeholder="وصف المدخل الفني"></textarea>
-        <input id="inputLink" class="ugec-input" placeholder="رابط الملف (Google Drive / SharePoint) أو اسم الملف">
+        <label class="text-sm block">رفع ملف مباشرة (حتى 20 ميجابايت)</label>
+        <input id="inputFile" type="file" class="ugec-input" accept=".pdf,.dwg,.dxf,.zip,.xlsx,.xls,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.csv">
+        <input id="inputLink" type="url" class="ugec-input" placeholder="أو رابط خارجي للملف (https://...)">
         <button class="ugec-btn-primary w-full justify-center">حفظ</button>
       </form>
     </div>
@@ -415,8 +420,10 @@
       <form onsubmit="submitTask(event)" class="space-y-3">
         <input type="hidden" id="submitTaskId">
         <input id="submitRev" class="ugec-input" placeholder="رقم الإصدار (مثال: Rev.01)" required>
-        <input id="submitFileName" class="ugec-input" placeholder="اسم الملف (مثال: SLD_Group1_Rev01.dwg)" required>
-        <input id="submitFileLink" class="ugec-input" placeholder="رابط الملف (Google Drive / OneDrive)" required>
+        <input id="submitFileName" class="ugec-input" placeholder="اسم الملف (مثال: SLD_Group1_Rev01.dwg)">
+        <label class="text-sm block">ملف التسليم (حتى 20 ميجابايت) أو رابط خارجي</label>
+        <input id="submitFile" type="file" class="ugec-input" accept=".pdf,.dwg,.dxf,.zip,.xlsx,.xls,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.csv">
+        <input id="submitFileLink" type="url" class="ugec-input" placeholder="رابط الملف (Google Drive / OneDrive)">
         <textarea id="submitNotes" class="ugec-input h-24" placeholder="ملاحظات الفريق (اختياري)"></textarea>
         <button class="ugec-btn-primary w-full justify-center">رفع التسليم</button>
       </form>
@@ -463,7 +470,7 @@
           <input id="teamGroup" class="ugec-input" placeholder="اسم المجموعة / الفريق" required>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <input id="teamPass" class="ugec-input" placeholder="كلمة مرور الدخول" required>
+          <div id="teamIdentity" class="text-xs text-sky-300 break-all"></div>
           <input id="teamProject" class="ugec-input" placeholder="عنوان مشروع التخرج">
         </div>
         <div class="text-xs text-slate-400 mt-2">لجنة المتابعة</div>
@@ -512,16 +519,32 @@
           <input id="gsPending" type="number" class="ugec-input" placeholder="مراجعات معلقة">
           <input id="gsProgress" type="number" min="0" max="100" class="ugec-input" placeholder="نسبة استكمال المشروع %">
         </div>
+        <div class="border-t border-slate-700 pt-3 space-y-2">
+          <p class="text-sm">نقل البيانات القديمة: اختر نسخة JSON أو اترك الحقل فارغًا للاستيراد من هذا المتصفح. تُضاف السجلات الناقصة فقط.</p>
+          <input id="legacyImport" type="file" accept=".json,application/json" class="ugec-input">
+          <button type="button" id="importLegacyBtn" class="ugec-chip" onclick="importLegacy()">استيراد البيانات القديمة</button>
+          <button type="button" class="ugec-chip" onclick="exportCloud()">تنزيل نسخة من البيانات السحابية</button>
+        </div>
         <button onclick="saveGlobalSettings()" class="ugec-btn-primary w-full justify-center">حفظ الإعدادات</button>
       </div>
     </div>
   </div>
 
+  <div class="max-w-5xl mx-auto px-4 py-4 text-center space-y-2">
+    <button class="ugec-chip" onclick="exportLegacy()">تنزيل نسخة من بيانات المتصفح القديم</button>
+    <p class="text-xs text-slate-400">النسخة القديمة قد تحتوي كلمات مرور. احتفظ بها خاصة ولا ترفعها إلى GitHub.</p>
+  </div>
+  <div id="resultModal" class="ugec-modal hidden">
+    <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
+    <div class="ugec-modal-content max-w-lg"><button class="ugec-chip mb-3" onclick="closeModals()">إغلاق</button><div id="resultContent"></div></div>
+  </div>
   <footer class="py-8 text-center text-[10px] text-slate-500">
     <div>UGEC GRADUATION PROJECTS 2027</div>
     <div>تصميم وتنفيذ: <span class="text-sky-300">Islam Ismail</span></div>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 
