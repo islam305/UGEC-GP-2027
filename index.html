@@ -512,13 +512,27 @@
       </div>
       <div class="space-y-3">
         <div class="grid grid-cols-2 gap-2">
-          <input id="gsSessions" type="number" class="ugec-input" placeholder="عدد السيشنات">
-          <input id="gsTasks" type="number" class="ugec-input" placeholder="عدد التاسكات">
+          <div class="space-y-1">
+            <label for="gsSessions" class="block text-sm font-bold">عدد السيشنات</label>
+            <input id="gsSessions" type="number" class="ugec-input" readonly aria-describedby="autoStatsHelp">
+          </div>
+          <div class="space-y-1">
+            <label for="gsTasks" class="block text-sm font-bold">عدد التاسكات</label>
+            <input id="gsTasks" type="number" class="ugec-input" readonly aria-describedby="autoStatsHelp">
+          </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <input id="gsPending" type="number" class="ugec-input" placeholder="مراجعات معلقة">
-          <input id="gsProgress" type="number" min="0" max="100" class="ugec-input" placeholder="نسبة استكمال المشروع %">
+          <div class="space-y-1">
+            <label for="gsPending" class="block text-sm font-bold">تسليمات تحت المراجعة</label>
+            <input id="gsPending" type="number" class="ugec-input" readonly aria-describedby="autoStatsHelp">
+          </div>
+          <div class="space-y-1">
+            <label for="gsProgress" class="block text-sm font-bold">نسبة استكمال المشروع (%)</label>
+            <input id="gsProgress" type="number" min="0" max="100" step="any" class="ugec-input" aria-describedby="projectProgressHelp">
+          </div>
         </div>
+        <p id="autoStatsHelp" class="text-xs text-slate-400">عدد السيشنات والتاسكات والتسليمات تحت المراجعة يُحسب تلقائيًا من البيانات الحالية، ويتحدث بعد الإضافة أو الحذف أو التقييم وتحديث البيانات.</p>
+        <p id="projectProgressHelp" class="text-xs text-slate-400">نسبة استكمال المشروع يحددها المشرف يدويًا وفقًا للتقدم الفعلي.</p>
         <div class="border-t border-slate-700 pt-3 space-y-2">
           <p class="text-sm">نقل البيانات القديمة: اختر نسخة JSON أو اترك الحقل فارغًا للاستيراد من هذا المتصفح. تُضاف السجلات الناقصة فقط.</p>
           <input id="legacyImport" type="file" accept=".json,application/json" class="ugec-input">

@@ -197,7 +197,13 @@ function saveTeam(e) {e.preventDefault();return run(async()=>{
   if([obj.progress,obj.score].some(x=>x<0||x>100)) throw Error('النسبة والدرجة من صفر إلى 100.');
   await commit('teams',id,obj);
 });}
-function saveGlobalSettings() {return run(async()=>{requireMentor();await commit('settings','global',{sessions:Number($('gsSessions').value)||0,tasks:Number($('gsTasks').value)||0,pending:Number($('gsPending').value)||0,progress:Number($('gsProgress').value)||0});});}
+function saveGlobalSettings() {return run(async()=>{
+  requireMentor();
+  const raw=$('gsProgress').value.trim();
+  const progress=Number(raw);
+  if(raw==='' || !Number.isFinite(progress) || progress<0 || progress>100) throw Error('نسبة استكمال المشروع يجب أن تكون من صفر إلى 100.');
+  await commit('settings','global',{...automaticStats(),progress});
+});}
 async function removeRecord(kind,id) {
   if(!confirm('حذف هذا السجل؟ لن تُحذف الملفات المخزنة تلقائيًا.')) return;
   await run(async()=>{requireMentor();const old=rows.get(key(kind,id));if(!old) throw Error('السجل غير موجود.');
@@ -288,10 +294,24 @@ function renderDashboard() {
 function renderReport() {
   const table=node('table',undefined,'table-ugec');const head=node('tr');['الجامعة','الفريق','المشروع','الإنجاز','التقييم'].forEach(x=>head.append(node('th',x)));const thead=node('thead');thead.append(head);table.append(thead);const body=node('tbody');state.universities.forEach(u=>{const r=node('tr');[u.name,u.group||'-',u.project||'-',(u.progress||0)+'%',(u.score||0)+'/100'].forEach(x=>r.append(node('td',x)));body.append(r);});table.append(body);$('reportContent').replaceChildren(table);
 }
-function updateStats() {['Sessions','Tasks','Pending','Progress'].forEach(s=>$('stat'+s).textContent=state.global[s.toLowerCase()]||0);}
+function automaticStats() {
+  return {
+    sessions:state.sessions.length,
+    tasks:state.tasks.length,
+    pending:state.submissions.filter(s=>s.status==='under_review').length
+  };
+}
+function displayedStats() {return {...automaticStats(),progress:state.global.progress||0};}
+function updateStats() {
+  const stats=displayedStats();
+  ['Sessions','Tasks','Pending','Progress'].forEach(s=>{
+    $('stat'+s).textContent=stats[s.toLowerCase()];
+    $('gs'+s).value=stats[s.toLowerCase()];
+  });
+}
 function renderAll() {updateStats();renderDashboard();renderSessions();renderInputs();renderTasks();renderReviews();renderTeams();renderReport();}
 function showTaskResult(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;const modal=$('resultModal');const t=state.tasks.find(t=>t.id===s.taskId);$('resultContent').replaceChildren(card(t?.title||'نتيجة التسليم',['الإصدار: '+s.rev,'الحالة: '+statusText(s.status),'الدرجة: '+(s.score===''?'لم يقيّم':s.score+'/100'),legacyReferenceText(s),'ملاحظات رئيسية: '+(s.major||'-'),'ملاحظات فرعية: '+(s.minor||'-')],(s.storagePath||s.fileLink)?[button('تنزيل التسليم',()=>openFile(s,'fileLink'))]:[]));closeModals();modal.classList.remove('hidden');}
-function openGlobalSettings() {requireMentor();closeModals();['Sessions','Tasks','Pending','Progress'].forEach(s=>$('gs'+s).value=state.global[s.toLowerCase()]||0);$('globalSettingsModal').classList.remove('hidden');}
+function openGlobalSettings() {requireMentor();closeModals();updateStats();$('globalSettingsModal').classList.remove('hidden');}
 function openReview(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;closeModals();$('reviewSubId').value=id;$('reviewScore').value=s.score??'';$('reviewStatus').value=s.status;$('reviewMajor').value=s.major||'';$('reviewMinor').value=s.minor||'';$('reviewModal').classList.remove('hidden');}
 
 function openAddSessionModal(id = null) {
