@@ -22,12 +22,20 @@ function uid() { return crypto.randomUUID(); }
 function clean(kind,data) {
   return Object.fromEntries(fields[kind].filter(f => Object.hasOwn(data,f)).map(f => [f,data[f]]));
 }
+let statusTimeout = null;
 function status(message,error=false) {
   const el=$('cloudStatus');
   el.textContent=message;
   el.style.color=error?'#fca5a5':'#7dd3fc';
-  if(message) el.classList.remove('h-0','opacity-0');
-  else el.classList.add('h-0','opacity-0');
+  if(message) {
+    el.classList.remove('h-0','opacity-0');
+    if(statusTimeout) clearTimeout(statusTimeout);
+    statusTimeout = setTimeout(() => {
+      el.classList.add('h-0','opacity-0');
+    }, 5000);
+  } else {
+    el.classList.add('h-0','opacity-0');
+  }
 }
 function errorText(err) {
   const m=err?.message || String(err);
@@ -99,26 +107,7 @@ function resetAuth() {
   document.querySelectorAll('.mentor-action').forEach(b=>b.classList.add('hidden'));
   status('تم تسجيل الخروج.');
 }
-function isMissingAuthSession(err) {
-  return err?.name==='AuthSessionMissingError' || /^Auth session missing!?$/i.test(err?.message||'');
-}
-async function signOutCurrentSession() {
-  try {
-    const {error}=await db.auth.signOut({scope:'local'});
-    if(error) throw error;
-    resetAuth();
-  } catch(err) {
-    if(!isMissingAuthSession(err)) throw err;
-    // An expired/revoked session is already signed out. Remove only this
-    // project's Supabase auth cache; preserve platform/legacy backup data.
-    const storageKey='sb-'+new URL(UGEC_CONFIG.url).hostname.split('.')[0]+'-auth-token';
-    [storageKey,storageKey+'-code-verifier',storageKey+'-user'].forEach(k=>localStorage.removeItem(k));
-    resetAuth();
-    // Discard any stale session still cached in the SDK's memory.
-    window.location.reload();
-  }
-}
-async function logout() {await run(signOutCurrentSession);}
+async function logout() { await run(async()=>{const {error}=await db.auth.signOut();if(error) throw error;resetAuth();}); }
 async function reloadData() {
   if(!profile || refreshing) return;
   refreshing=true;
