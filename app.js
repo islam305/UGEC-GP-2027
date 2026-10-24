@@ -4,10 +4,10 @@ const BUCKET = 'ugec-files';
 const kinds = ['teams','sessions','inputs','tasks','submissions','settings'];
 const fields = {
   teams: ['name','group','members','coordinator','primaryEngineer','secondaryEngineer','advisor','progress','score','project'],
-  sessions: ['title','presenter','date','time','desc','videoLink'],
-  inputs: ['title','ref','desc','link','storagePath','fileName'],
+  sessions: ['legacyReferences','title','presenter','date','time','desc','videoLink'],
+  inputs: ['legacyReferences','title','ref','desc','link','storagePath','fileName'],
   tasks: ['title','desc','deadline','format','createdAt'],
-  submissions: ['taskId','uniId','rev','fileName','fileLink','storagePath','notes','status','score','major','minor','date'],
+  submissions: ['legacyReferences','taskId','uniId','rev','fileName','fileLink','storagePath','notes','status','score','major','minor','date'],
   settings: ['sessions','tasks','pending','progress']
 };
 let db, profile, user, busy = false, refreshing = false;
@@ -128,8 +128,12 @@ async function put(kind,id,data,insertOnly=false) {
 }
 async function commit(kind,id,data) {await put(kind,id,data);await reloadData();closeModals();}
 function externalURL(value) {
-  if(!value?.trim()) return '';
-  const url=new URL(value.trim());
+  if(value==null || value==='') return '';
+  if(typeof value!=='string') throw Error('الرابط يجب أن يكون نصًا يبدأ بـ https://');
+  if(!value.trim()) return '';
+  let url;
+  try { url=new URL(value.trim()); }
+  catch { throw Error('الرابط غير مكتمل. أدخل عنوانًا يبدأ بـ https://، أو ارفع الملف نفسه بدل كتابة اسمه.'); }
   if(!['https:','http:'].includes(url.protocol)) throw Error('استخدم رابط https أو http صالحًا.');
   return url.href;
 }
@@ -156,7 +160,7 @@ async function openFile(record,field='link') {
 }
 function saveSession(e) { e.preventDefault();return run(async()=>{
   requireMentor();const id=$('sessionId').value||uid();const old=state.sessions.find(s=>s.id===id);
-  await commit('sessions',id,{title:$('sessionTitle').value,presenter:$('sessionPresenter').value,date:$('sessionDate').value,time:$('sessionTime').value,desc:$('sessionDesc').value,videoLink:old?.videoLink||''});
+  await commit('sessions',id,{title:$('sessionTitle').value,presenter:$('sessionPresenter').value,date:$('sessionDate').value,time:$('sessionTime').value,desc:$('sessionDesc').value,videoLink:old?.videoLink||'',legacyReferences:old?.legacyReferences||{}});
 }); }
 function saveSessionVideo(e) {e.preventDefault();return run(async()=>{
   requireMentor();const id=$('sessionVideoId').value;const old=state.sessions.find(s=>s.id===id);if(!old) throw Error('السيشن غير موجودة.');
@@ -167,7 +171,7 @@ function saveInput(e) {e.preventDefault();return run(async()=>{
   const link=externalURL($('inputLink').value);
   if($('inputFile').files[0] && link) throw Error('اختار ملفًا أو رابطًا خارجيًا، وليس الاثنين.');
   const file=await uploadFile('inputFile','shared');
-  const obj={title:$('inputTitle').value,ref:$('inputRef').value,desc:$('inputDesc').value,link,...(file||(!link?{storagePath:old.storagePath||'',fileName:old.fileName||''}:{}))};
+  const obj={legacyReferences:(!file&&!link)?old.legacyReferences||{}:{},title:$('inputTitle').value,ref:$('inputRef').value,desc:$('inputDesc').value,link,...(file||(!link?{storagePath:old.storagePath||'',fileName:old.fileName||''}:{}))};
   await commit('inputs',id,obj);
 });}
 function saveTask(e) {e.preventDefault();return run(async()=>{
@@ -218,13 +222,20 @@ function importLegacy() {return run(async()=>{
   if(!legacy || !Array.isArray(legacy.universities) || !Array.isArray(legacy.tasks)) throw Error('صيغة النسخة غير صحيحة.');
   if(!confirm('استيراد السجلات الناقصة فقط؟ السجلات الحالية لن تتغير. النسخة الأصلية قد تحتوي كلمات مرور قديمة؛ احتفظ بها خاصة.')) return;
   const batch=[];
+  let unresolvedCount=0;
   for(const kind of kinds) {
     const records=kind==='settings'?[{id:'global',...(legacy.global||{})}]:(legacy[kind==='teams'?'universities':kind]||[]);
     if(!Array.isArray(records)) throw Error('قسم غير صالح: '+kind);
     for(const item of records) {
       if(!item || !/^[A-Za-z0-9_-]{1,100}$/.test(item.id||'')) throw Error('معرّف غير صالح في '+kind);
       const data=clean(kind,item);
-      for(const field of ['link','fileLink','videoLink']) if(data[field]) data[field]=externalURL(data[field]);
+      for(const field of ['link','fileLink','videoLink']) if(data[field]) {
+        try { data[field]=externalURL(data[field]); }
+        catch {
+          data.legacyReferences={...(data.legacyReferences||{}),[field]:String(data[field])};
+          data[field]='';unresolvedCount++;
+        }
+      }
       if(kind==='submissions' && (!data.uniId||!data.taskId)) throw Error('تسليم بدون معرّف فريق أو تاسك.');
       batch.push({kind,id:item.id,data});
     }
@@ -238,7 +249,7 @@ function importLegacy() {return run(async()=>{
     }
   } catch(err) {throw Error('تم حفظ '+imported+' سجل قبل توقف الاستيراد. حدّث البيانات ثم أعد الاستيراد لتكملة الناقص. '+errorText(err));}
   finally {await reloadData();}
-  alert('تم استيراد '+imported+' سجل وتجاوز '+skipped+' سجل موجود. كلمات المرور القديمة لم تُنقل؛ أنشئ الحسابات الجديدة حسب accounts.sql.');
+  alert('تم استيراد '+imported+' سجل وتجاوز '+skipped+' سجل موجود. '+(unresolvedCount?'تم الاحتفاظ بـ '+unresolvedCount+' مرجع غير صالح كنص بدل رابط؛ راجعها وأعد رفع ملفاتها أو صحح روابطها. ':'')+'كلمات المرور القديمة لم تُنقل؛ أنشئ الحسابات الجديدة حسب accounts.sql.');
 });}
 // Plain text nodes and event listeners prevent stored data from becoming HTML/code.
 function node(tag,text,cls='') {const el=document.createElement(tag);if(text!==undefined)el.textContent=text;el.className=cls;return el;}
@@ -257,10 +268,11 @@ function taskActions(t) {
   return actions;
 }
 function renderTasks() {list('tasksList',state.tasks.slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)),(t,i)=>card('تاسك '+(i+1)+': '+t.title,[t.desc||'', 'الموعد: '+(t.deadline||'-'),'الصيغة: '+(t.format||'-')],taskActions(t)));}
-function sessionCard(s) {const actions=[];if(s.videoLink) actions.push(button('مشاهدة الفيديو',()=>openFile(s,'videoLink')));if(state.isMentor)actions.push(button('تعديل',()=>openAddSessionModal(s.id)),button('رابط الفيديو',()=>openSessionVideoModal(s.id)),button('حذف',()=>deleteSession(s.id)));return card(s.title,[s.presenter||'',(s.date||'')+' '+(s.time||''),s.desc||''],actions);}
+function legacyReferenceText(record) {return Object.entries(record.legacyReferences||{}).filter(([field])=>!record[field]&&!record.storagePath).map(([,text])=>'مرجع قديم يحتاج رابطًا صالحًا أو إعادة رفع: '+text).join('\n');}
+function sessionCard(s) {const actions=[];if(s.videoLink) actions.push(button('مشاهدة الفيديو',()=>openFile(s,'videoLink')));if(state.isMentor)actions.push(button('تعديل',()=>openAddSessionModal(s.id)),button('رابط الفيديو',()=>openSessionVideoModal(s.id)),button('حذف',()=>deleteSession(s.id)));return card(s.title,[s.presenter||'',(s.date||'')+' '+(s.time||''),s.desc||'',legacyReferenceText(s)],actions);}
 function renderSessions() {list('sessionsList',state.sessions,sessionCard);}
-function renderInputs() {list('inputsList',state.inputs,i=>{const actions=[];if(i.link||i.storagePath)actions.push(button('تنزيل / فتح الملف',()=>openFile(i)));if(state.isMentor)actions.push(button('تعديل',()=>openAddInputModal(i.id)),button('حذف',()=>deleteInput(i.id)));return card(i.title+(i.ref?' • '+i.ref:''),[i.desc||'',i.fileName||''],actions);});}
-function renderReviews() {list('reviewsList',state.isMentor?state.submissions:[],s=>{const t=state.tasks.find(t=>t.id===s.taskId);const u=state.universities.find(u=>u.id===s.uniId);const actions=[button('تقييم / تعديل التقييم',()=>openReview(s.id))];if(s.fileLink||s.storagePath)actions.push(button('تنزيل التسليم',()=>openFile(s,'fileLink')));return card((u?.name||s.uniId)+' • '+(t?.title||'تاسك محذوف'),['الإصدار: '+s.rev+' • '+dateText(s.date),'الملف: '+(s.fileName||'-'),s.notes||'',statusText(s.status)+' • الدرجة: '+(s.score??'-')],actions);});}
+function renderInputs() {list('inputsList',state.inputs,i=>{const actions=[];if(i.link||i.storagePath)actions.push(button('تنزيل / فتح الملف',()=>openFile(i)));if(state.isMentor)actions.push(button('تعديل',()=>openAddInputModal(i.id)),button('حذف',()=>deleteInput(i.id)));return card(i.title+(i.ref?' • '+i.ref:''),[i.desc||'',i.fileName||'',legacyReferenceText(i)],actions);});}
+function renderReviews() {list('reviewsList',state.isMentor?state.submissions:[],s=>{const t=state.tasks.find(t=>t.id===s.taskId);const u=state.universities.find(u=>u.id===s.uniId);const actions=[button('تقييم / تعديل التقييم',()=>openReview(s.id))];if(s.fileLink||s.storagePath)actions.push(button('تنزيل التسليم',()=>openFile(s,'fileLink')));return card((u?.name||s.uniId)+' • '+(t?.title||'تاسك محذوف'),['الإصدار: '+s.rev+' • '+dateText(s.date),'الملف: '+(s.fileName||'-'),s.notes||'',legacyReferenceText(s),statusText(s.status)+' • الدرجة: '+(s.score??'-')],actions);});}
 function teamCard(u) {return card(u.name+' '+(u.group||''),['معرّف الفريق: '+u.id,'المشروع: '+(u.project||'-'),'الأعضاء:\n'+(u.members||'-'),'Project Coordinator: '+(u.coordinator||'-'),'Primary Engineer: '+(u.primaryEngineer||'-'),'Secondary Engineer: '+(u.secondaryEngineer||'-'),'الإنجاز: '+(u.progress||0)+'% • التقييم: '+(u.score||0)+'/100'],state.isMentor?[button('تعديل',()=>openAddTeamModal(u.id))]:[]);}
 function renderTeams() {list('teamsList',state.universities,teamCard);}
 function average(id) {const scores=state.submissions.filter(s=>s.uniId===id&&s.score!==''&&s.score!=null).map(s=>Number(s.score));return scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;}
@@ -278,7 +290,7 @@ function renderReport() {
 }
 function updateStats() {['Sessions','Tasks','Pending','Progress'].forEach(s=>$('stat'+s).textContent=state.global[s.toLowerCase()]||0);}
 function renderAll() {updateStats();renderDashboard();renderSessions();renderInputs();renderTasks();renderReviews();renderTeams();renderReport();}
-function showTaskResult(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;const modal=$('resultModal');const t=state.tasks.find(t=>t.id===s.taskId);$('resultContent').replaceChildren(card(t?.title||'نتيجة التسليم',['الإصدار: '+s.rev,'الحالة: '+statusText(s.status),'الدرجة: '+(s.score===''?'لم يقيّم':s.score+'/100'),'ملاحظات رئيسية: '+(s.major||'-'),'ملاحظات فرعية: '+(s.minor||'-')],(s.storagePath||s.fileLink)?[button('تنزيل التسليم',()=>openFile(s,'fileLink'))]:[]));closeModals();modal.classList.remove('hidden');}
+function showTaskResult(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;const modal=$('resultModal');const t=state.tasks.find(t=>t.id===s.taskId);$('resultContent').replaceChildren(card(t?.title||'نتيجة التسليم',['الإصدار: '+s.rev,'الحالة: '+statusText(s.status),'الدرجة: '+(s.score===''?'لم يقيّم':s.score+'/100'),legacyReferenceText(s),'ملاحظات رئيسية: '+(s.major||'-'),'ملاحظات فرعية: '+(s.minor||'-')],(s.storagePath||s.fileLink)?[button('تنزيل التسليم',()=>openFile(s,'fileLink'))]:[]));closeModals();modal.classList.remove('hidden');}
 function openGlobalSettings() {requireMentor();closeModals();['Sessions','Tasks','Pending','Progress'].forEach(s=>$('gs'+s).value=state.global[s.toLowerCase()]||0);$('globalSettingsModal').classList.remove('hidden');}
 function openReview(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;closeModals();$('reviewSubId').value=id;$('reviewScore').value=s.score??'';$('reviewStatus').value=s.status;$('reviewMajor').value=s.major||'';$('reviewMinor').value=s.minor||'';$('reviewModal').classList.remove('hidden');}
 
