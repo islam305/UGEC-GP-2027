@@ -99,7 +99,26 @@ function resetAuth() {
   document.querySelectorAll('.mentor-action').forEach(b=>b.classList.add('hidden'));
   status('تم تسجيل الخروج.');
 }
-async function logout() { await run(async()=>{const {error}=await db.auth.signOut();if(error) throw error;resetAuth();}); }
+function isMissingAuthSession(err) {
+  return err?.name==='AuthSessionMissingError' || /^Auth session missing!?$/i.test(err?.message||'');
+}
+async function signOutCurrentSession() {
+  try {
+    const {error}=await db.auth.signOut({scope:'local'});
+    if(error) throw error;
+    resetAuth();
+  } catch(err) {
+    if(!isMissingAuthSession(err)) throw err;
+    // An expired/revoked session is already signed out. Remove only this
+    // project's Supabase auth cache; preserve platform/legacy backup data.
+    const storageKey='sb-'+new URL(UGEC_CONFIG.url).hostname.split('.')[0]+'-auth-token';
+    [storageKey,storageKey+'-code-verifier',storageKey+'-user'].forEach(k=>localStorage.removeItem(k));
+    resetAuth();
+    // Discard any stale session still cached in the SDK's memory.
+    window.location.reload();
+  }
+}
+async function logout() {await run(signOutCurrentSession);}
 async function reloadData() {
   if(!profile || refreshing) return;
   refreshing=true;
