@@ -96,7 +96,7 @@ async function establish(account,expectedRole) {
   $('activeRoleLabel').textContent=state.isMentor?'مشرف':state.universities[0]?.name||'فريق الجامعة';
   $('mentorSettingsBtn').classList.toggle('hidden',!state.isMentor);
   $('legacyBackupPanel').classList.toggle('hidden',!state.isMentor);
-  $('tabReviewsBtn').classList.toggle(
+  $('tabReviewsBtn').classList.toggle('hidden',!state.isMentor);
   'hidden',
   !state.isMentor && !state.currentUni
 );
@@ -294,110 +294,33 @@ function sessionCard(s) {const actions=[];if(s.videoLink) actions.push(button('�
 function renderSessions() {list('sessionsList',state.sessions,sessionCard);}
 function renderInputs() {list('inputsList',state.inputs,i=>{const actions=[];if(i.link||i.storagePath)actions.push(button('تنزيل / فتح الملف',()=>openFile(i)));if(state.isMentor)actions.push(button('تعديل',()=>openAddInputModal(i.id)),button('حذف',()=>deleteInput(i.id)));return card(i.title+(i.ref?' • '+i.ref:''),[i.desc||'',i.fileName||'',legacyReferenceText(i)],actions);});}
 function renderReviews() {
-  const caption = document.querySelector('#tab-reviews .text-xs');
-
-  if (caption) {
-    caption.textContent = state.isMentor
-      ? 'مراجعة تسليمات الفرق وإضافة التقييم والملاحظات'
-      : 'نتائج تسليمات فريقك وملاحظات المراجعة لكل إصدار';
-  }
-
-  /* بوابة المشرف: نفس وظائف التقييم الحالية */
-  if (state.isMentor) {
-    list('reviewsList', state.submissions, s => {
-      const t = state.tasks.find(t => t.id === s.taskId);
-      const u = state.universities.find(u => u.id === s.uniId);
-
-      const actions = [
-        button('تقييم / تعديل التقييم', () => openReview(s.id))
-      ];
-
-      if (s.fileLink || s.storagePath) {
-        actions.push(
-          button('تنزيل التسليم', () => openFile(s, 'fileLink'))
-        );
-      }
-
-      return card(
-        (u?.name || s.uniId) + ' • ' + (t?.title || 'تاسك محذوف'),
-        [
-          'الإصدار: ' + s.rev + ' • ' + dateText(s.date),
-          'الملف: ' + (s.fileName || '-'),
-          s.notes || '',
-          legacyReferenceText(s),
-          statusText(s.status) + ' • الدرجة: ' + (s.score ?? '-')
-        ],
-        actions
-      );
-    });
-
-    return;
-  }
-
-  /* بوابة الطالب: تسليمات فريقه فقط، الأحدث أولًا */
-  const ownSubmissions = state.currentUni
-    ? state.submissions
-        .filter(s => s.uniId === state.currentUni)
-        .sort(
-          (a, b) =>
-            (Date.parse(b.date) || 0) -
-            (Date.parse(a.date) || 0)
-        )
-    : [];
-
-  list('reviewsList', ownSubmissions, s => {
+  list('reviewsList', state.isMentor ? state.submissions : [], s => {
     const t = state.tasks.find(t => t.id === s.taskId);
+    const u = state.universities.find(u => u.id === s.uniId);
 
-    const hasScore =
-      s.score !== '' &&
-      s.score !== null &&
-      s.score !== undefined;
-
-    const actions = [];
+    const actions = [
+      button('تقييم / تعديل التقييم', () => openReview(s.id))
+    ];
 
     if (s.fileLink || s.storagePath) {
       actions.push(
-        button('فتح التسليم', () => openFile(s, 'fileLink'))
+        button('تنزيل التسليم', () => openFile(s, 'fileLink'))
       );
     }
 
     return card(
-      t?.title || 'نتيجة تسليم لتاسك محذوف',
+      (u?.name || s.uniId) + ' • ' + (t?.title || 'تاسك محذوف'),
       [
-        'الإصدار: ' + (s.rev ?? '-') + ' • ' + dateText(s.date),
-        'الحالة: ' + statusText(s.status),
-
-        'الدرجة: ' + (
-          hasScore
-            ? s.score + '/100'
-            : 'لم يتم التقييم بعد'
-        ),
-
-        'ملاحظات رئيسية: ' + (
-          s.major || 'لا توجد ملاحظات'
-        ),
-
-        'ملاحظات فرعية: ' + (
-          s.minor || 'لا توجد ملاحظات'
-        ),
-
-        legacyReferenceText(s)
+        'الإصدار: ' + s.rev + ' • ' + dateText(s.date),
+        'الملف: ' + (s.fileName || '-'),
+        s.notes || '',
+        legacyReferenceText(s),
+        statusText(s.status) + ' • الدرجة: ' + (s.score ?? '-')
       ],
       actions
     );
   });
-
-  if (!ownSubmissions.length) {
-    $('reviewsList').replaceChildren(
-      node(
-        'p',
-        'لا توجد تسليمات لفريقك حتى الآن.',
-        'text-sm text-slate-400'
-      )
-    );
-  }
-}
-function teamCard(u) {return card(u.name+' '+(u.group||''),['معرّف الفريق: '+u.id,'المشروع: '+(u.project||'-'),'الأعضاء:\n'+(u.members||'-'),'Project Coordinator: '+(u.coordinator||'-'),'Primary Engineer: '+(u.primaryEngineer||'-'),'Secondary Engineer: '+(u.secondaryEngineer||'-'),'الإنجاز: '+(u.progress||0)+'% • التقييم: '+(u.score||0)+'/100'],state.isMentor?[button('تعديل',()=>openAddTeamModal(u.id))]:[]);}
+}function teamCard(u) {return card(u.name+' '+(u.group||''),['معرّف الفريق: '+u.id,'المشروع: '+(u.project||'-'),'الأعضاء:\n'+(u.members||'-'),'Project Coordinator: '+(u.coordinator||'-'),'Primary Engineer: '+(u.primaryEngineer||'-'),'Secondary Engineer: '+(u.secondaryEngineer||'-'),'الإنجاز: '+(u.progress||0)+'% • التقييم: '+(u.score||0)+'/100'],state.isMentor?[button('تعديل',()=>openAddTeamModal(u.id))]:[]);}
 function renderTeams() {list('teamsList',state.universities,teamCard);}
 function average(id) {const scores=state.submissions.filter(s=>s.uniId===id&&s.score!==''&&s.score!=null).map(s=>Number(s.score));return scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;}
 function renderDashboard() {
