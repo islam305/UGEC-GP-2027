@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=display" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="master-ui.css">
   <script>
     tailwind.config = {
       theme: {
@@ -36,6 +37,563 @@
       }
     }
   </script>
+<style>
+  #authGate {
+    background-image:
+      linear-gradient(
+        to right,
+        rgba(2, 16, 35, 0.08) 0%,
+        rgba(2, 16, 35, 0.20) 30%,
+        rgba(2, 16, 35, 0.78) 55%,
+        rgba(2, 16, 35, 0.95) 78%,
+        rgba(2, 16, 35, 0.98) 100%
+      ),
+      url("./ugec-background.png.jpg");
+
+    background-size: cover;
+    background-position: left center;
+    background-repeat: no-repeat;
+    background-color: #021023;
+    min-height: 100vh;
+  }
+
+  #authGate > .absolute {
+    display: none;
+  }
+
+  /* كارت الدخول بخلفية زجاجية */
+  #authGate .glow-card {
+    background: linear-gradient(
+      135deg,
+      rgba(30, 53, 83, 0.82),
+      rgba(4, 23, 48, 0.94)
+    );
+    border: 1px solid #299bd4;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* على الموبايل، التعتيم يغطي الخلفية لقراءة النص */
+  @media (max-width: 767px) {
+    #authGate {
+      background-image:
+        linear-gradient(
+          rgba(2, 16, 35, 0.65),
+          rgba(2, 16, 35, 0.92)
+        ),
+        url("./ugec-background.png.jpg");
+      background-position: left center;
+    }
+  }
+</style>
+<style>
+  /* بانر الملخص فوق التابات */
+  #appShell > div > section:first-child > .ugec-card {
+    background-image:
+      linear-gradient(
+        to right,
+        rgba(2, 16, 35, 0.30) 0%,
+        rgba(2, 16, 35, 0.55) 35%,
+        rgba(2, 16, 35, 0.90) 65%,
+        rgba(2, 16, 35, 0.97) 100%
+      ),
+      url("./ugec-background.png.jpg") !important;
+
+    background-size: cover !important;
+    background-position: left center !important;
+    background-repeat: no-repeat !important;
+    border: 1px solid #187dad;
+    border-radius: 18px;
+    min-height: 180px;
+    animation: none;
+  }
+
+  /* خلفية الإحصائيات تحافظ على وضوح الأرقام */
+  #appShell .ugec-stat {
+    background: rgba(5, 27, 51, 0.90);
+    border-color: #245475;
+  }
+
+  @media (max-width: 767px) {
+    #appShell > div > section:first-child > .ugec-card {
+      background-image:
+        linear-gradient(
+          rgba(2, 16, 35, 0.70),
+          rgba(2, 16, 35, 0.94)
+        ),
+        url("./ugec-background.png.jpg") !important;
+    }
+  }
+
+  @media print {
+    #appShell > div > section:first-child > .ugec-card {
+      background: #fff !important;
+    }
+  }
+</style>
+<style>
+  /* ===== UGEC Login Page ===== */
+
+  #authGate.ugec-login {
+    position: relative;
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: calc(var(--header-space, 110px) + 40px) 32px 48px;
+    color: #f1f7ff;
+
+    background-color: #021126;
+    background-image:
+      linear-gradient(
+        to right,
+        rgba(2, 16, 35, .08) 0%,
+        rgba(2, 16, 35, .20) 28%,
+        rgba(2, 16, 35, .80) 53%,
+        rgba(2, 16, 35, .97) 82%,
+        rgba(2, 16, 35, .98) 100%
+      ),
+      url("./ugec-background.png.jpg");
+
+    background-size: cover;
+    background-position: left center;
+    background-repeat: no-repeat;
+  }
+
+  /* لا نتجاوز إخفاء الصفحة بعد تسجيل الدخول */
+  #authGate.ugec-login:not(.hidden) {
+    display: grid;
+    align-items: center;
+  }
+
+  #authGate.ugec-login.hidden {
+    display: none;
+  }
+
+  .ug-entry-layout {
+    width: 100%;
+    max-width: 1460px;
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(340px, 1fr);
+    align-items: center;
+    gap: clamp(32px, 4vw, 72px);
+  }
+
+  .ug-entry-layout > * {
+    min-width: 0;
+  }
+
+  /* Branding */
+  .ug-entry-brand {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .ug-entry-logo {
+    width: 128px;
+    height: 128px;
+    flex-shrink: 0;
+    object-fit: contain;
+    border-radius: 50%;
+    background: #082441;
+    border: 1px solid #4c9cc4;
+    box-shadow:
+      0 0 25px rgba(0, 178, 255, .2),
+      8px 5px 22px rgba(255, 190, 35, .16);
+  }
+
+  .ug-entry-brand-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ug-entry-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 14px;
+    margin-bottom: 14px;
+    border: 1px solid rgba(255, 191, 45, .25);
+    border-radius: 30px;
+    background: rgba(255, 191, 45, .04);
+    color: #ffca38;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .ug-entry-title {
+    margin: 0;
+    color: #fff;
+    text-align: right;
+    font-size: clamp(28px, 2.8vw, 45px);
+    line-height: 1.2;
+    font-weight: 900;
+    letter-spacing: -.8px;
+  }
+
+  .ug-entry-title span {
+    color: #38d9f6;
+    background: linear-gradient(90deg, #1ed6ff, #75e1e1, #ffd25a);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .ug-entry-slogan {
+    margin: 24px 0 10px;
+    color: #50dcfa;
+    font-size: clamp(22px, 2vw, 32px);
+    font-weight: 700;
+    line-height: 1.7;
+  }
+
+  .ug-entry-gold-line {
+    width: 180px;
+    height: 3px;
+    margin: 0 0 28px auto;
+    border-radius: 50%;
+    background: linear-gradient(90deg, transparent, #ffc52b);
+    transform: rotate(3deg);
+  }
+
+  .ug-entry-description {
+    margin: 0 0 24px;
+    color: #dce6f4;
+    font-size: clamp(15px, 1.2vw, 18px);
+    line-height: 2;
+  }
+
+  .ug-entry-description strong {
+    color: #ffd13b;
+  }
+
+  /* Feature cards */
+  .ug-entry-features {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .ug-entry-feature {
+    padding: 22px 14px;
+    text-align: center;
+    border: 1px solid #12618b;
+    border-radius: 18px;
+    background: linear-gradient(
+      145deg,
+      rgba(6, 40, 68, .82),
+      rgba(2, 20, 41, .94)
+    );
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03);
+  }
+
+  .ug-entry-feature-icon {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 14px;
+    border: 1px solid #0876a4;
+    border-radius: 16px;
+    background: rgba(0, 179, 239, .14);
+    color: #19d1fa;
+    font-size: 25px;
+  }
+
+  .ug-entry-feature-gold .ug-entry-feature-icon {
+    background: rgba(255, 193, 38, .14);
+    border-color: #97732a;
+    color: #ffca36;
+  }
+
+  .ug-entry-feature h3 {
+    margin: 0 0 10px;
+    color: #f1f7ff;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.7;
+  }
+
+  .ug-entry-feature p {
+    margin: 0;
+    color: #b6c6db;
+    font-size: 13px;
+    line-height: 1.9;
+  }
+
+  .ug-entry-credit {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 26px;
+    color: #a8bbd1;
+    font-size: 12px;
+  }
+
+  .ug-entry-credit span {
+    padding: 4px 10px;
+    color: #24d8ff;
+    background: #002b43;
+    border: 1px solid #075a7c;
+    border-radius: 7px;
+    font-weight: 800;
+  }
+
+  /* Glass login card */
+  .ug-entry-login-card {
+    padding: 42px 30px 30px;
+    text-align: center;
+    border: 1px solid #319ed5;
+    border-radius: 28px;
+    background: linear-gradient(
+      140deg,
+      rgba(40, 59, 88, .80),
+      rgba(3, 22, 47, .94) 75%
+    );
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, .35),
+      0 0 22px rgba(0, 162, 244, .12),
+      inset 0 1px 0 rgba(255, 255, 255, .1);
+  }
+
+  .ug-entry-login-icon {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 22px;
+    color: #26d5ff;
+    font-size: 28px;
+    border-radius: 20px;
+    border: 1px solid #ffd03e;
+    border-bottom-color: #00c8ff;
+    background: #031a30;
+    box-shadow: 0 0 20px rgba(0, 191, 255, .16);
+  }
+
+  .ug-entry-login-card h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1.7;
+  }
+
+  .ug-entry-login-subtitle {
+    margin: 5px 0 28px;
+    color: #d0dcec;
+    font-size: 13px;
+  }
+
+  .ug-entry-actions {
+    display: grid;
+    gap: 14px;
+  }
+
+  .ug-entry-button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 82px;
+    padding: 14px 18px;
+    border-radius: 18px;
+    text-align: right;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: filter .2s, transform .2s;
+  }
+
+  .ug-entry-button:hover {
+    filter: brightness(1.08);
+    transform: translateY(-2px);
+  }
+
+  .ug-entry-button:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 4px;
+  }
+
+  .ug-entry-mentor {
+    background: linear-gradient(110deg, #ffc600, #f8a900);
+    color: #071629;
+    box-shadow: 0 8px 24px rgba(255, 178, 0, .16);
+  }
+
+  .ug-entry-team {
+    background: linear-gradient(110deg, #00bde9, #0751f3);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0, 115, 255, .2);
+  }
+
+  .ug-entry-button-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 13px;
+    background: rgba(0, 0, 0, .13);
+    font-size: 22px;
+  }
+
+  .ug-entry-team .ug-entry-button-icon {
+    background: rgba(255, 255, 255, .17);
+  }
+
+  .ug-entry-button-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ug-entry-button-text strong,
+  .ug-entry-button-text small {
+    display: block;
+    color: inherit;
+  }
+
+  .ug-entry-button-text strong {
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.6;
+  }
+
+  .ug-entry-button-text small {
+    font-size: 10px;
+    line-height: 1.8;
+    margin-top: 2px;
+  }
+
+  .ug-entry-arrow {
+    flex-shrink: 0;
+    font-size: 18px;
+  }
+
+  .ug-entry-access-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 32px 0 0;
+    color: #e0e9f6;
+    font-size: 11px;
+    line-height: 1.9;
+  }
+
+  .ug-entry-access-note i {
+    color: #ffcc35;
+  }
+
+  /* Tablet and mobile */
+  @media (max-width: 1000px) {
+    .ug-entry-layout {
+      grid-template-columns: 1fr;
+      gap: 32px;
+      max-width: 720px;
+    }
+
+    .ug-entry-login-card {
+      width: 100%;
+      max-width: 480px;
+      margin-inline: auto;
+    }
+
+    #authGate.ugec-login {
+      background-image:
+        linear-gradient(
+          rgba(2, 16, 35, .65),
+          rgba(2, 16, 35, .93)
+        ),
+        url("./ugec-background.png.jpg");
+    }
+  }
+
+  @media (max-width: 600px) {
+    #authGate.ugec-login {
+      padding-inline: 18px;
+      padding-bottom: 30px;
+    }
+
+    .ug-entry-brand {
+      flex-direction: column;
+      gap: 18px;
+      text-align: center;
+    }
+
+    .ug-entry-logo {
+      width: 90px;
+      height: 90px;
+    }
+
+    .ug-entry-title {
+      text-align: center;
+      font-size: 30px;
+    }
+
+    .ug-entry-badge {
+      justify-content: center;
+      font-size: 10px;
+    }
+
+    .ug-entry-slogan {
+      text-align: center;
+      font-size: 23px;
+    }
+
+    .ug-entry-gold-line {
+      margin-inline: auto;
+    }
+
+    .ug-entry-description {
+      font-size: 14px;
+    }
+
+    .ug-entry-features {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .ug-entry-feature {
+      padding: 18px;
+    }
+
+    .ug-entry-credit {
+      justify-content: center;
+    }
+
+    .ug-entry-login-card {
+      padding: 30px 18px;
+      border-radius: 22px;
+    }
+
+    .ug-entry-login-card h2 {
+      font-size: 22px;
+    }
+
+    .ug-entry-button {
+      padding: 12px;
+      gap: 9px;
+    }
+
+    .ug-entry-button-text strong {
+      font-size: 15px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ug-entry-button {
+      transition: none;
+    }
+
+    .ug-entry-button:hover {
+      transform: none;
+    }
+  }
+</style>
 </head>
 
 <body class="font-cairo bg-ugec-bg text-slate-100 antialiased">
@@ -58,6 +616,11 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <button onclick="toggleTheme()" id="themeBtn" aria-label="الوضع الليلي/النهاري" title="تبديل الوضع">
+          <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-ugec-border text-slate-300 hover:text-white transition">
+            <i id="themeIcon" class="fa-solid fa-moon"></i>
+          </span>
+        </button>
         <button onclick="openNotifications()" class="relative hidden" id="notifBtn" aria-label="الإشعارات" title="الإشعارات">
           <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-ugec-border text-slate-300 hover:text-white transition">
             <i class="fa-solid fa-bell"></i>
@@ -85,145 +648,138 @@
 
   <div id="cloudStatus" role="status" aria-live="polite" class="fixed top-[92px] inset-x-0 z-40 bg-slate-950 text-center text-xs py-2 px-4 h-0 overflow-hidden opacity-0"></div>
   <!-- Auth Gate -->
-  <main id="authGate" class="min-h-screen relative overflow-hidden flex items-center justify-center px-4 pt-28 pb-12">
-    <!-- Animated Glowing Background Lights -->
-    <div class="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
-      <div class="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1000px] h-[1000px] rounded-full bg-gradient-to-br from-sky-500/15 via-cyan-500/10 to-transparent blur-[150px] animate-pulse"></div>
-      <div class="absolute bottom-[-20%] right-[-10%] w-[800px] h-[800px] rounded-full bg-gradient-to-tl from-amber-500/10 via-yellow-500/5 to-transparent blur-[160px]"></div>
-      <div class="absolute top-[30%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-600/10 blur-[140px]"></div>
-    </div>
+  <main id="authGate" class="ugec-login" dir="rtl">
+  <div class="ug-entry-layout">
 
-    <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+    <!-- التعريف بالمنصة على اليمين -->
+    <section class="ug-entry-hero" aria-label="عن منصة UGEC">
 
-      <!-- Hero Left Side (Info & Branding) -->
-      <div class="lg:col-span-7 space-y-6 text-center lg:text-right">
+      <div class="ug-entry-brand">
+        <img
+          src="3.png"
+          alt="شعار UGEC"
+          class="ug-entry-logo"
+        >
 
-        <!-- Logo Badge Header -->
-        <div class="flex flex-col lg:flex-row items-center lg:items-start gap-5">
-          <div class="relative group">
-            <div class="absolute -inset-1 rounded-full bg-gradient-to-r from-sky-400 to-amber-400 blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
-            <div class="relative w-24 h-24 rounded-full border-2 border-slate-900 bg-slate-950 overflow-hidden shadow-2xl">
-              <img src="3.png" alt="UGEC" class="w-full h-full object-cover">
-            </div>
-          </div>
-          <div class="space-y-2">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-sky-400/30 bg-sky-500/10 text-sky-300 text-xs font-extrabold shadow-sm">
-              <i class="fa-solid fa-bolt text-amber-400"></i> المجموعة المتحدة للإستشارات الهندسيَة
-            </div>
-            <h1 class="text-3xl md:text-5xl font-black leading-tight tracking-tight">
-              UGEC GRADUATION PROJECTS <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-cyan-300 to-amber-300">2027</span>
-            </h1>
-            <p class="text-base md:text-lg font-bold text-slate-200">
-              مبادرة رائدة لدعم مشاريع تخرج محطات الجهد العالي والمتوسط
-            </p>
-          </div>
-        </div>
-
-        <!-- Detailed Description Card -->
-        <div class="ugec-card rounded-2xl p-5 border-sky-500/20 backdrop-blur-md bg-slate-900/60 shadow-xl space-y-2">
-          <p class="text-slate-300 text-sm md:text-base leading-relaxed">
-            منصة متكاملة ومؤمنة تنظم التواصل المباشر بين <strong class="text-sky-300">الفريق الاستشاري بشركة UGEC</strong> و<strong class="text-amber-300">فرق الجامعات المشاركة</strong> لمتابعة الورش الفنية، التسليمات، المراجع، والتقييم الدوري بأعلى معايير الخصوصية.
-          </p>
-          <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-2">
-            <span class="ugec-chip text-sky-300 border-sky-500/30 bg-sky-500/10"><i class="fa-solid fa-lock text-xs"></i> خصوصية تامة لكل جامعة</span>
-            <span class="ugec-chip text-amber-300 border-amber-500/30 bg-amber-500/10"><i class="fa-solid fa-chalkboard-user text-xs"></i> ورش عمل تخصصية</span>
-            <span class="ugec-chip text-emerald-300 border-emerald-500/30 bg-emerald-500/10"><i class="fa-solid fa-file-signature text-xs"></i> تقييم استشاري دقيق</span>
-          </div>
-        </div>
-
-        <!-- Grid Metrics -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="ugec-card rounded-2xl p-4 text-center border-sky-500/20 hover:border-sky-400/50 transition">
-            <div class="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center mx-auto mb-2 text-sm">
-              <i class="fa-solid fa-university"></i>
-            </div>
-            <div class="text-[11px] text-slate-400 font-bold">الجامعات المشاركة</div>
-            <div class="mt-1 text-2xl font-black text-white">٥ فرق</div>
-          </div>
-          <div class="ugec-card rounded-2xl p-4 text-center border-amber-500/20 hover:border-amber-400/50 transition">
-            <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-2 text-sm">
-              <i class="fa-solid fa-video"></i>
-            </div>
-            <div class="text-[11px] text-slate-400 font-bold">السيشنات والورش</div>
-            <div class="mt-1 text-2xl font-black text-white">متجددة</div>
-          </div>
-          <div class="ugec-card rounded-2xl p-4 text-center border-emerald-500/20 hover:border-emerald-400/50 transition">
-            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-2 text-sm">
-              <i class="fa-solid fa-tasks"></i>
-            </div>
-            <div class="text-[11px] text-slate-400 font-bold">التاسكات الفنية</div>
-            <div class="mt-1 text-2xl font-black text-white">مستمرة</div>
-          </div>
-          <div class="ugec-card rounded-2xl p-4 text-center border-cyan-500/20 hover:border-cyan-400/50 transition">
-            <div class="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto mb-2 text-sm">
-              <i class="fa-solid fa-shield-halved"></i>
-            </div>
-            <div class="text-[11px] text-slate-400 font-bold">متابعة دقيقة</div>
-            <div class="mt-1 text-xl font-extrabold text-cyan-300 pt-1"><i class="fa-solid fa-check-double"></i> 100%</div>
-          </div>
-        </div>
-
-        <div class="text-xs text-slate-400 flex items-center justify-center lg:justify-start gap-2">
-          <span>تصميم وتنفيذ المنصة:</span>
-          <span class="text-sky-300 font-extrabold px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/20">Islam Ismail</span>
-        </div>
-
-      </div>
-
-      <!-- Login Action Cards (Right Side) -->
-      <div class="lg:col-span-5 w-full max-w-md mx-auto">
-        <div class="ugec-card rounded-3xl p-7 md:p-8 space-y-6 relative overflow-hidden border-sky-500/30 shadow-2xl shadow-sky-500/10 glow-card">
-          <div class="absolute -top-24 -left-24 w-56 h-56 rounded-full bg-gradient-to-br from-sky-500/20 to-amber-500/10 blur-3xl pointer-events-none"></div>
-
-          <div class="relative space-y-3 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 to-amber-500 p-0.5 mx-auto shadow-lg shadow-sky-500/30">
-              <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-sky-300 text-2xl">
-                <i class="fa-solid fa-right-to-bracket"></i>
-              </div>
-            </div>
-            <div>
-              <h2 class="text-xl font-extrabold text-white">تسجيل الدخول للمنصة</h2>
-              <p class="text-xs text-slate-400 mt-1">اختر بوابة الدخول المناسبة لحسابك</p>
-            </div>
+        <div class="ug-entry-brand-text">
+          <div class="ug-entry-badge">
+            <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+            مبادرة UGEC لدعم مشاريع التخرج | دفعة 2027
           </div>
 
-          <div class="relative grid grid-cols-1 gap-3 pt-2">
-            <button onclick="openMentorLogin()" class="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-extrabold text-sm shadow-xl shadow-amber-500/20 transition-all transform hover:-translate-y-1 group">
-              <div class="flex items-center gap-3">
-                <span class="w-9 h-9 rounded-xl bg-slate-950/20 flex items-center justify-center text-slate-950 text-base">
-                  <i class="fa-solid fa-user-gear"></i>
-                </span>
-                <span class="text-right">
-                  <span class="block">دخول المشرف / المنسق</span>
-                  <span class="block text-[10px] font-normal opacity-85">للمتابعة وتقييم تسليمات الفرق</span>
-                </span>
-              </div>
-              <i class="fa-solid fa-arrow-left text-xs transition-transform group-hover:-translate-x-1"></i>
-            </button>
-
-            <button onclick="openUniLogin()" class="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-gradient-to-r from-sky-500 via-cyan-600 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-sm shadow-xl shadow-sky-500/20 transition-all transform hover:-translate-y-1 group">
-              <div class="flex items-center gap-3">
-                <span class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white text-base">
-                  <i class="fa-solid fa-graduation-cap"></i>
-                </span>
-                <span class="text-right">
-                  <span class="block">دخول فريق الجامعة</span>
-                  <span class="block text-[10px] font-normal text-sky-100 opacity-85">لمتابعة المهام ورفع التسليمات</span>
-                </span>
-              </div>
-              <i class="fa-solid fa-arrow-left text-xs transition-transform group-hover:-translate-x-1"></i>
-            </button>
-          </div>
-
-          <div class="relative pt-2 border-t border-slate-800 text-center">
-            <p class="text-[11px] text-slate-400">جميع الحقوق محفوظة © UGEC 2027</p>
-          </div>
+          <h1 class="ug-entry-title" dir="ltr">
+            UGEC GRADUATION<br>
+            PROJECTS <span>2027</span>
+          </h1>
         </div>
       </div>
 
-    </div>
-  </main>
+      <h2 class="ug-entry-slogan">
+        معًا نصنع جيلًا هندسيًا أكثر جاهزية للمستقبل
+      </h2>
 
+      <div class="ug-entry-gold-line" aria-hidden="true"></div>
+
+      <p class="ug-entry-description">
+        منصة <strong>UGEC</strong> تجمع فرق مشاريع التخرج الجامعية
+        والفريق الاستشاري في مساحة واحدة، لدعم مشروعات محطات
+        الجهد العالي والمتوسط. من المحتوى الفني والورش إلى
+        تسليم المهام ومراجعتها، تساعدكم المنصة على تطوير أفكاركم،
+        وتنظيم خطواتكم، وتحويل ما تعلّمتموه إلى مخرجات هندسية واضحة.
+      </p>
+
+      <div class="ug-entry-features">
+
+        <article class="ug-entry-feature">
+          <span class="ug-entry-feature-icon">
+            <i class="fa-solid fa-comments" aria-hidden="true"></i>
+          </span>
+          <h3>مراجعة تساعدك تتطور</h3>
+          <p>تقييم وملاحظات فنية لتحسين مخرجات المشروع</p>
+        </article>
+
+        <article class="ug-entry-feature ug-entry-feature-gold">
+          <span class="ug-entry-feature-icon">
+            <i class="fa-solid fa-gears" aria-hidden="true"></i>
+          </span>
+          <h3>خطوات واضحة للتنفيذ</h3>
+          <p>مهام وتسليمات تساعد فريقك على تنظيم العمل</p>
+        </article>
+
+        <article class="ug-entry-feature">
+          <span class="ug-entry-feature-icon">
+            <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+          </span>
+          <h3>معرفة تدعم مشروعك</h3>
+          <p>مستندات فنية وسيشنات وورش في مكان واحد</p>
+        </article>
+
+      </div>
+
+      <div class="ug-entry-credit">
+        تصميم وتنفيذ المنصة:
+        <span dir="ltr">Islam Ismail</span>
+      </div>
+    </section>
+
+    <!-- كارت الدخول على الشمال -->
+    <section class="ug-entry-login-card" aria-label="الدخول للمنصة">
+
+      <div class="ug-entry-login-icon">
+        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+      </div>
+
+      <h2>خطوتك التالية تبدأ هنا</h2>
+      <p class="ug-entry-login-subtitle">
+        ادخل إلى حسابك وتابع رحلة مشروعك.
+      </p>
+
+      <div class="ug-entry-actions">
+
+        <button
+          type="button"
+          onclick="openMentorLogin()"
+          class="ug-entry-button ug-entry-mentor"
+        >
+          <span class="ug-entry-button-icon">
+            <i class="fa-solid fa-user-gear" aria-hidden="true"></i>
+          </span>
+
+          <span class="ug-entry-button-text">
+            <strong>دخول المشرف</strong>
+            <small>لمتابعة الفرق ومراجعة التسليمات</small>
+          </span>
+
+          <i class="fa-solid fa-arrow-left ug-entry-arrow" aria-hidden="true"></i>
+        </button>
+
+        <button
+          type="button"
+          onclick="openUniLogin()"
+          class="ug-entry-button ug-entry-team"
+        >
+          <span class="ug-entry-button-icon">
+            <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+          </span>
+
+          <span class="ug-entry-button-text">
+            <strong>دخول فريق الجامعة</strong>
+            <small>للوصول إلى المحتوى والمهام ورفع التسليمات</small>
+          </span>
+
+          <i class="fa-solid fa-arrow-left ug-entry-arrow" aria-hidden="true"></i>
+        </button>
+
+      </div>
+
+      <p class="ug-entry-access-note">
+        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        جميع الحقوق محفوظة © UGEC 2027
+      </p>
+
+    </section>
+  </div>
+</main>
   <!-- App -->
   <div id="appShell" class="hidden pt-16">
     <div class="max-w-[1500px] mx-auto px-4 md:px-6">
@@ -387,7 +943,7 @@
     <div class="ugec-modal-backdrop" onclick="closeModals()"></div>
     <div class="ugec-modal-content max-w-sm">
       <div class="flex items-center justify-between mb-4">
-        <div class="font-bold">دخول المشرف / المنسق</div>
+        <div class="font-bold">دخول المشرف</div>
         <button onclick="closeModals()"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <form onsubmit="loginMentor(event)" class="space-y-3">
@@ -506,11 +1062,8 @@
       </div>
       <form onsubmit="submitTask(event)" class="space-y-3">
         <input type="hidden" id="submitTaskId">
-        <input id="submitRev" class="ugec-input" placeholder="رقم الإصدار (مثال: Rev.01)" required>
         <input id="submitFileName" class="ugec-input" placeholder="اسم الملف (مثال: SLD_Group1_Rev01.dwg)">
-        <label class="text-sm block">ملف التسليم (حتى 20 ميجابايت) أو رابط خارجي</label>
-        <input id="submitFile" type="file" class="ugec-input" accept=".pdf,.dwg,.dxf,.zip,.xlsx,.xls,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.csv">
-        <input id="submitFileLink" type="url" class="ugec-input" placeholder="رابط الملف (Google Drive / OneDrive)">
+        <input id="submitFileLink" type="url" class="ugec-input" placeholder="رابط الملف (Google Drive / OneDrive)" required>
         <textarea id="submitNotes" class="ugec-input h-24" placeholder="ملاحظات الفريق (اختياري)"></textarea>
         <button class="ugec-btn-primary w-full justify-center">رفع التسليم</button>
       </form>

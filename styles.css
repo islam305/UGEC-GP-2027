@@ -74,7 +74,47 @@ body {
   animation: countdownBar 15s linear forwards;
 }
 
-/* Enhanced UI Components */
+/* Light Mode Overrides */
+.light-mode {
+  background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  color: #0f172a !important;
+}
+
+.light-mode .ugec-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+.light-mode .ugec-stat {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.light-mode .text-slate-100 { color: #0f172a !important; }
+.light-mode .text-slate-200 { color: #334155 !important; }
+.light-mode .text-slate-300 { color: #475569 !important; }
+.light-mode .text-slate-400 { color: #64748b !important; }
+.light-mode .text-white { color: #0f172a !important; }
+
+.light-mode .ugec-input {
+  background: #fff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.light-mode .ugec-modal-content {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.light-mode .tab-btn {
+  border-color: #e2e8f0 !important;
+  color: #64748b !important;
+}
+.light-mode .tab-btn:hover { background: #f1f5f9 !important; color: #0f172a !important; }
+.light-mode .tab-btn.active { background: #0ea5e9 !important; color: #fff !important; }
+
 .ugec-card {
   background: radial-gradient(800px 400px at 100% 0%, rgba(56, 189, 248, 0.05), transparent), #0f1629;
   border: 1px solid #1e293b;

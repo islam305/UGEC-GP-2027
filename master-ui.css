@@ -1,0 +1,854 @@
+/* UGEC 2027 — Shared UI */
+:root {
+  color-scheme: dark;
+  --ui-bg: #031326;
+  --ui-panel: #061d37;
+  --ui-border: #16476b;
+  --ui-text: #eff7ff;
+  --ui-muted: #a8c2d8;
+  --ui-blue: #13b5f6;
+  --ui-gold: #ffbf32;
+  --header-space: 110px;
+}
+
+html {
+  scroll-padding-top: calc(var(--header-space) + 20px);
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 100% 15%, #06365b88, transparent 55%),
+    radial-gradient(ellipse at 0% 65%, #0a416044, transparent 45%),
+    var(--ui-bg);
+  color: var(--ui-text);
+  min-height: 100vh;
+}
+
+/* Header */
+body > header {
+  background: #03182ef5;
+  border-color: #1475a6;
+  box-shadow: 0 5px 24px #0004;
+}
+
+body > header > div:last-child {
+  min-height: 68px;
+  height: auto;
+  padding-block: 10px;
+}
+
+body > header > div:last-child > div {
+  min-width: 0;
+}
+
+body > header button > span:first-child,
+#refreshBtn {
+  border-color: var(--ui-border);
+  background: #06223c;
+}
+
+body > header button:hover > span:first-child {
+  border-color: var(--ui-blue);
+}
+
+#appShell {
+  padding-top: var(--header-space);
+  min-height: calc(100vh - 80px);
+}
+
+#authGate {
+  padding-top: calc(var(--header-space) + 32px);
+}
+
+#cloudStatus {
+  top: var(--header-space);
+}
+
+#appShell > div {
+  max-width: 1640px;
+}
+
+/* Shared cards */
+.ugec-card {
+  background:
+    linear-gradient(125deg, #08284466, transparent 55%),
+    var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  border-radius: 16px;
+  box-shadow: 0 8px 28px #0003;
+  transition: border-color .18s, box-shadow .18s;
+}
+
+.ugec-card:hover {
+  transform: none;
+  border-color: #24658e;
+  box-shadow: 0 8px 28px #0003;
+}
+
+.glow-card {
+  animation: none;
+}
+
+#appShell > div > section:first-child > .ugec-card {
+  background:
+    radial-gradient(ellipse at 55% 100%, #0e638b40, transparent 65%),
+    var(--ui-panel);
+  border-color: #13638c;
+  gap: 24px;
+}
+
+#appShell > div > section:first-child > .ugec-card > .space-y-1 {
+  flex: 1;
+  padding-inline-start: 16px;
+  border-inline-start: 3px solid var(--ui-gold);
+}
+
+/* Statistics: icons are decorative; values remain unchanged */
+.ugec-stat {
+  --stat-color: #13b5f6;
+  position: relative;
+  padding: 16px 12px;
+  border-radius: 13px;
+  border: 1px solid var(--ui-border);
+  background: linear-gradient(135deg, #10355488, #0a213b);
+}
+
+.ugec-stat::before {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--stat-color);
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-size: 22px;
+}
+
+.ugec-stat:has(#statSessions)::before {
+  content: "\f51c";
+}
+
+.ugec-stat:has(#statTasks) {
+  --stat-color: #2ce3b0;
+}
+
+.ugec-stat:has(#statTasks)::before {
+  content: "\f0ae";
+}
+
+.ugec-stat:has(#statPending) {
+  --stat-color: #ffbf32;
+}
+
+.ugec-stat:has(#statPending)::before {
+  content: "\f252";
+}
+
+.ugec-stat:has(#statProgress) {
+  --stat-color: #a99aff;
+}
+
+.ugec-stat:has(#statProgress)::before {
+  content: "\f200";
+}
+
+.ugec-stat > .text-xl {
+  color: var(--stat-color);
+  font-size: 27px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.ugec-stat::after {
+  content: "";
+  display: block;
+  width: 32px;
+  height: 3px;
+  margin: 8px auto 0;
+  border-radius: 9px;
+  background: var(--stat-color);
+  opacity: .65;
+}
+
+/* Navigation */
+#appShell nav {
+  gap: 10px;
+}
+
+.tab-btn {
+  min-height: 46px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  background: #041e35;
+  border-color: #1373a1;
+  color: #c3daec;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tab-btn i {
+  color: #88bddf;
+  font-size: 16px;
+}
+
+.tab-btn:hover {
+  background: #0c3654;
+  border-color: var(--ui-blue);
+  color: var(--ui-text);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #009def, #0074bc);
+  color: #fff;
+  border-color: #31c5ff;
+  box-shadow: 0 0 20px #009bdf3d;
+}
+
+.tab-btn.active i {
+  color: #fff;
+}
+
+/* Dynamically generated content in every tab */
+.tab-pane .ugec-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tab-pane .ugec-card .ugec-card,
+#notificationsList .ugec-card {
+  background: linear-gradient(120deg, #0e2d4b, #0a213c);
+  border-color: #1b4566;
+  border-radius: 12px;
+  box-shadow: none;
+  padding: 18px;
+}
+
+#dashTeams .ugec-card,
+#dashSupervisors .ugec-card,
+#dashRanking .ugec-card,
+#teamsList .ugec-card {
+  border-inline-start: 3px solid var(--ui-gold);
+}
+
+#dashRightTitle {
+  border-inline-start: 3px solid var(--ui-blue);
+  padding-inline-start: 10px;
+}
+
+#tasksList,
+#sessionsList,
+#inputsList,
+#reviewsList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+#tasksList > *,
+#sessionsList > *,
+#inputsList > *,
+#reviewsList > * {
+  margin: 0;
+  min-width: 0;
+}
+
+.tab-pane .text-slate-400 {
+  color: var(--ui-muted);
+}
+
+.tab-pane p.text-slate-400,
+#notificationsList > p {
+  padding: 24px;
+  text-align: center;
+  border: 1px dashed var(--ui-border);
+  border-radius: 12px;
+  grid-column: 1 / -1;
+}
+
+/* Buttons */
+.ugec-chip,
+.ugec-btn-primary,
+.ugec-btn-secondary,
+.ugec-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 13px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.7;
+  border: 1px solid #1b7196;
+  background: #05273d;
+  color: #82d8ff;
+}
+
+.ugec-chip:hover,
+.ugec-btn-secondary:hover {
+  background: #0c3b56;
+  border-color: #3bc5ff;
+}
+
+.ugec-btn-primary {
+  min-height: 44px;
+  background: linear-gradient(135deg, #009fee, #0079be);
+  color: #fff;
+  border-color: #29baff;
+}
+
+.ugec-btn-primary:hover {
+  background: #0089cf;
+}
+
+.ugec-btn-danger {
+  color: #ffb4b4;
+  border-color: #a84c5e;
+  background: #421e2a;
+}
+
+.ugec-chip.amber {
+  color: #ffcf65;
+  border-color: #b482325c;
+  background: #7050132b;
+}
+
+.ugec-chip.green {
+  color: #6be9bd;
+  border-color: #28ab7c66;
+  background: #14563b40;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--ui-gold);
+  outline-offset: 4px;
+}
+
+/* Notifications: existing hidden class still controls the dot */
+#notifDot {
+  background: var(--ui-gold);
+  width: 9px;
+  height: 9px;
+  box-shadow: 0 0 0 3px var(--ui-panel), 0 0 10px #ffbf3255;
+}
+
+/* Forms and dialogs */
+.ugec-input {
+  color: var(--ui-text);
+  background: #04172c;
+  border-color: #214b6a;
+  border-radius: 10px;
+  min-height: 44px;
+}
+
+.ugec-input::placeholder {
+  color: #91adc4;
+  opacity: 1;
+}
+
+.ugec-input:focus {
+  border-color: var(--ui-blue);
+  box-shadow: 0 0 0 3px #13b5f625;
+}
+
+input[type=email],
+input[type=url],
+input[type=password] {
+  direction: ltr;
+  text-align: start;
+}
+
+.ugec-modal {
+  z-index: 60;
+  padding: 24px 16px;
+}
+
+.ugec-modal-backdrop {
+  background: #010b1de6;
+  backdrop-filter: blur(8px);
+}
+
+.ugec-modal-content {
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--ui-text);
+  background: var(--ui-panel);
+  border-color: #22658a;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 24px 100px #0008;
+}
+
+.ugec-modal-content button[onclick="closeModals()"] {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--ui-border);
+  border-radius: 9px;
+}
+
+/* Tables */
+.table-ugec {
+  min-width: 620px;
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table-ugec thead th {
+  background: #0b2c48;
+  border-bottom: 1px solid #216085;
+  color: #a9d4ee;
+  font-size: 12px;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+
+.table-ugec tbody td {
+  border-color: var(--ui-border);
+  color: var(--ui-text);
+}
+
+.table-ugec tbody tr:nth-child(even) {
+  background: #0e2b444f;
+}
+
+.table-ugec tbody tr:hover {
+  background: #14507644;
+}
+
+#reportContent {
+  overflow-x: auto;
+  border-radius: 12px;
+}
+
+/* Tablet */
+@media (max-width: 1279px) {
+  :root {
+    --header-space: 152px;
+  }
+
+  body > header > div:last-child {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+  :root {
+    --header-space: 190px;
+  }
+
+  body > header > div:last-child {
+    padding-block: 8px;
+  }
+
+  body > header > div:last-child > div:last-child {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  body > header > div:last-child > div:first-child {
+    width: 100%;
+  }
+
+  body > header > div:last-child > div:first-child .text-sm {
+    font-size: 12px;
+  }
+
+  body > header > div:first-child {
+    font-size: 10px;
+  }
+
+  #appShell > div {
+    padding-inline: 14px;
+  }
+
+  #appShell nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px 2px 12px;
+    scrollbar-width: thin;
+  }
+
+  .tab-btn {
+    flex-shrink: 0;
+    padding-inline: 14px;
+    font-size: 12px;
+  }
+
+  #tasksList,
+  #sessionsList,
+  #inputsList,
+  #reviewsList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tab-pane > .ugec-card {
+    padding: 16px;
+  }
+
+  .tab-pane .ugec-card > .flex.items-center.justify-between {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .ugec-stat {
+    padding: 12px 10px;
+  }
+
+  .ugec-modal-content {
+    padding: 18px;
+  }
+}
+
+/* Existing light theme */
+body.light-mode {
+  color-scheme: light;
+  --ui-panel: #fff;
+  --ui-border: #c2d8e8;
+  --ui-text: #102e49;
+  --ui-muted: #46647c;
+}
+
+.light-mode > header {
+  background: #f5fafff5;
+  border-color: #bad6e9;
+}
+
+.light-mode > header > div:first-child {
+  background: #102a41;
+}
+
+.light-mode > header button > span:first-child,
+.light-mode #refreshBtn {
+  background: #e8f3fb;
+}
+
+.light-mode > header .text-slate-300 {
+  color: #46647c !important;
+}
+
+.light-mode .ugec-stat > .text-xl {
+  color: #08689e !important;
+}
+
+.light-mode .tab-btn {
+  background: #f4faff;
+}
+
+.light-mode .tab-btn.active {
+  background: #007bc4 !important;
+  color: #fff !important;
+}
+
+.light-mode .ugec-chip,
+.light-mode .ugec-btn-secondary {
+  color: #08669a;
+  background: #eaf6ff;
+  border-color: #98c5df;
+}
+
+.light-mode .ugec-btn-primary {
+  color: #fff !important;
+}
+
+.light-mode .ugec-btn-danger {
+  color: #a1263b;
+  background: #fff0f1;
+  border-color: #eeb9c3;
+}
+
+.light-mode .table-ugec thead th {
+  color: #345d7b;
+  background: #eaf3fa;
+}
+
+.light-mode .table-ugec tbody tr:nth-child(even) {
+  background: #f4f8fb;
+}
+
+.light-mode .ugec-input::placeholder {
+  color: #617b91;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  .salawat-text {
+    color: #fbd375;
+  }
+}
+
+/* Printing */
+@media print {
+  #appShell {
+    padding-top: 0;
+  }
+
+  .ugec-card,
+  .tab-pane .ugec-card .ugec-card {
+    color: #102e49 !important;
+    background: #fff !important;
+    border-color: #bdcdd9 !important;
+    box-shadow: none !important;
+  }
+
+  .tab-pane .text-slate-400 {
+    color: #46647c !important;
+  }
+
+  #reportContent {
+    overflow: visible;
+  }
+
+  .table-ugec {
+    min-width: 100%;
+  }
+}
+/* UGEC — Photo background and glass interface */
+:root {
+  --ugec-photo: url("./ugec-background.png.png");
+}
+
+/* Login background */
+body:not(.light-mode):has(#authGate:not(.hidden)) {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(2, 15, 33, .15),
+      rgba(2, 15, 33, .48)
+    ),
+    var(--ugec-photo);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Remove the old decorative lights above the photo */
+#authGate > .absolute {
+  display: none;
+}
+
+#authGate {
+  background: transparent;
+}
+
+/* Login card */
+body:not(.light-mode) #authGate .glow-card {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(43, 68, 100, .66),
+      rgba(4, 23, 48, .9)
+    );
+  border: 1px solid rgba(57, 184, 255, .75);
+  border-radius: 26px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, .4),
+    0 0 24px rgba(0, 157, 255, .16),
+    inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+
+/* Login page information cards */
+body:not(.light-mode) #authGate .ugec-card:not(.glow-card) {
+  background: rgba(4, 24, 47, .78);
+  border-color: rgba(31, 136, 193, .5);
+  backdrop-filter: blur(8px);
+}
+
+/* Internal pages: same photo with a darker overlay */
+body:not(.light-mode):has(#appShell:not(.hidden)) {
+  background-image:
+    linear-gradient(
+      rgba(2, 17, 36, .78),
+      rgba(2, 17, 36, .91)
+    ),
+    var(--ugec-photo);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Main header */
+body:not(.light-mode) > header {
+  background: rgba(2, 20, 41, .9);
+  border-bottom: 1px solid rgba(0, 183, 255, .6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, .3);
+}
+
+/* Navigation strip */
+body:not(.light-mode) #appShell nav {
+  padding: 12px;
+  border: 1px solid rgba(28, 132, 188, .48);
+  border-radius: 16px;
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(2, 23, 45, .94),
+      rgba(5, 40, 69, .84)
+    ),
+    var(--ugec-photo);
+  background-size: cover;
+  background-position: center 45%;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, .22),
+    inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+
+/* Navigation buttons */
+body:not(.light-mode) .tab-btn {
+  background: rgba(3, 28, 51, .85);
+  color: #c9e5f7;
+  border: 1px solid #1378a6;
+  border-radius: 11px;
+}
+
+body:not(.light-mode) .tab-btn:hover {
+  background: rgba(11, 67, 101, .9);
+  border-color: #35c5ff;
+}
+
+body:not(.light-mode) .tab-btn.active {
+  background: linear-gradient(135deg, #00b7f4, #0079d3);
+  border-color: #42d2ff;
+  color: #fff;
+  box-shadow:
+    0 0 22px rgba(0, 174, 255, .3),
+    inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+
+/* Summary banner */
+body:not(.light-mode)
+#appShell > div > section:first-child > .ugec-card {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(3, 25, 49, .9),
+      rgba(4, 28, 54, .72)
+    ),
+    var(--ugec-photo);
+  background-size: cover;
+  background-position: center 55%;
+  border-color: rgba(20, 158, 221, .6);
+}
+
+/* All page panels */
+body:not(.light-mode) .tab-pane > .ugec-card,
+body:not(.light-mode) #tab-dashboard > div > div > .ugec-card {
+  background: linear-gradient(
+    135deg,
+    rgba(5, 34, 61, .94),
+    rgba(3, 23, 46, .94)
+  );
+  border: 1px solid rgba(22, 137, 194, .65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, .25),
+    inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+
+/* Records inside every tab */
+body:not(.light-mode) .tab-pane .ugec-card .ugec-card,
+body:not(.light-mode) #notificationsList .ugec-card {
+  background: linear-gradient(
+    120deg,
+    rgba(18, 48, 79, .94),
+    rgba(9, 33, 60, .94)
+  );
+  border-color: #204e72;
+  border-radius: 13px;
+}
+
+/* Shared section headings */
+body:not(.light-mode) .tab-pane > .ugec-card > .flex:first-child,
+body:not(.light-mode)
+#tab-dashboard > div > div > .ugec-card > .flex:first-child {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(58, 142, 190, .2);
+}
+
+/* Statistics */
+body:not(.light-mode) .ugec-stat {
+  background: linear-gradient(
+    135deg,
+    rgba(13, 43, 74, .96),
+    rgba(6, 28, 53, .94)
+  );
+  border-color: #205173;
+}
+
+/* Table header */
+body:not(.light-mode) .table-ugec thead th {
+  background: #0b2c49;
+  color: #b8dff4;
+}
+
+body:not(.light-mode) .table-ugec tbody tr:hover {
+  background: rgba(16, 110, 158, .18);
+}
+
+/* Dialogs */
+body:not(.light-mode) .ugec-modal-content {
+  background: linear-gradient(135deg, #0b2946, #041a32);
+  border-color: #258bbb;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, .55);
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+  body:not(.light-mode):has(#authGate:not(.hidden)),
+  body:not(.light-mode):has(#appShell:not(.hidden)) {
+    background-attachment: scroll;
+    background-position: 30% top;
+  }
+
+  body:not(.light-mode) #authGate .glow-card {
+    background: rgba(4, 23, 48, .93);
+    border-radius: 20px;
+  }
+
+  body:not(.light-mode) #appShell nav {
+    padding: 10px;
+    border-radius: 12px;
+  }
+}
+
+/* Keep reports clean when printed */
+@media print {
+  body,
+  body:not(.light-mode):has(#appShell:not(.hidden)),
+  body:not(.light-mode):has(#authGate:not(.hidden)) {
+    background: #fff !important;
+  }
+
+  body:not(.light-mode) .ugec-card,
+  body:not(.light-mode) .tab-pane .ugec-card .ugec-card {
+    background: #fff !important;
+    color: #102e49 !important;
+    box-shadow: none !important;
+    backdrop-filter: none;
+  }
+}

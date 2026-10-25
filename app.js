@@ -93,7 +93,7 @@ async function establish(account,expectedRole) {
   $('authGate').classList.add('hidden'); $('appShell').classList.remove('hidden');
   $('notifBtn').classList.remove('hidden');
   $('logoutBtn').classList.remove('hidden'); $('refreshBtn').classList.remove('hidden');
-  $('activeRoleLabel').textContent=state.isMentor?'مشرف / المنسق':state.universities[0]?.name||'فريق الجامعة';
+  $('activeRoleLabel').textContent=state.isMentor?'مشرف':state.universities[0]?.name||'فريق الجامعة';
   $('mentorSettingsBtn').classList.toggle('hidden',!state.isMentor);
   $('legacyBackupPanel').classList.toggle('hidden',!state.isMentor);
   $('tabReviewsBtn').classList.toggle('hidden',!state.isMentor);
@@ -195,10 +195,8 @@ function saveTask(e) {e.preventDefault();return run(async()=>{
 function submitTask(e) {e.preventDefault();return run(async()=>{
   if(profile?.role!=='team') throw Error('تسجيل دخول الفريق مطلوب.');
   const fileLink=externalURL($('submitFileLink').value);
-  if($('submitFile').files[0] && fileLink) throw Error('اختار ملفًا أو رابطًا خارجيًا، وليس الاثنين.');
-  const file=await uploadFile('submitFile',profile.team_id);
-  if(!file && !fileLink) throw Error('اختر ملفًا أو أدخل رابط تسليم صالحًا.');
-  await commit('submissions',uid(),{taskId:$('submitTaskId').value,uniId:profile.team_id,rev:$('submitRev').value,fileName:file?.fileName||$('submitFileName').value,fileLink,...(file||{}),notes:$('submitNotes').value,status:'under_review',score:'',major:'',minor:'',date:new Date().toISOString()});
+  if(!fileLink) throw Error('أدخل رابط تسليم صالحًا.');
+  await commit('submissions',uid(),{taskId:$('submitTaskId').value,uniId:profile.team_id,rev:'Rev.01',fileName:$('submitFileName').value||'رابط تسليم الخارجية',fileLink,notes:$('submitNotes').value,status:'under_review',score:'',major:'',minor:'',date:new Date().toISOString()});
 });}
 function saveReview(e) {e.preventDefault();return run(async()=>{
   requireMentor();const id=$('reviewSubId').value;const old=state.submissions.find(s=>s.id===id);if(!old) throw Error('التسليم غير موجود.');
@@ -324,7 +322,50 @@ function updateStats() {
   });
 }
 function renderAll() {updateNotificationIndicator();updateStats();renderDashboard();renderSessions();renderInputs();renderTasks();renderReviews();renderTeams();renderReport();}
-function showTaskResult(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;const modal=$('resultModal');const t=state.tasks.find(t=>t.id===s.taskId);$('resultContent').replaceChildren(card(t?.title||'نتيجة التسليم',['الإصدار: '+s.rev,'الحالة: '+statusText(s.status),'الدرجة: '+(s.score===''?'لم يقيّم':s.score+'/100'),legacyReferenceText(s),'ملاحظات رئيسية: '+(s.major||'-'),'ملاحظات فرعية: '+(s.minor||'-')],(s.storagePath||s.fileLink)?[button('تنزيل التسليم',()=>openFile(s,'fileLink'))]:[]));closeModals();modal.classList.remove('hidden');}
+function showTaskResult(id) {
+  const s=state.submissions.find(s=>s.id===id);
+  if(!s)return;
+  const modal=$('resultModal');
+  const t=state.tasks.find(t=>t.id===s.taskId);
+
+  const container = document.createElement('div');
+  container.className = 'space-y-3';
+
+  if (Number(s.score) > 60) {
+    const banner = document.createElement('div');
+    banner.className = 'ugec-card p-4 text-center rounded-2xl bg-gradient-to-r from-emerald-500/20 via-sky-500/20 to-amber-500/20 border border-emerald-500/40 animate-pulse';
+    banner.innerHTML = '<div class="text-3xl mb-1">🎉</div><div class="text-xl font-black text-emerald-400">Congratulations!</div><div class="text-xs text-slate-300 mt-1">أداء رائع ومميز، استمروا في التميز!</div>';
+    container.appendChild(banner);
+  }
+
+  const detailsCard = card(t?.title||'نتيجة التسليم',[
+    'الحالة: '+statusText(s.status),
+    'الدرجة: '+(s.score===''?'لم يقيّم':s.score+'/100'),
+    legacyReferenceText(s),
+    'ملاحظات رئيسية: '+(s.major||'-'),
+    'ملاحظات فرعية: '+(s.minor||'-')
+  ], (s.storagePath||s.fileLink)?[button('تنزيل التسليم',()=>openFile(s,'fileLink'))]:[]);
+
+  container.appendChild(detailsCard);
+  $('resultContent').replaceChildren(container);
+  closeModals();
+  modal.classList.remove('hidden');
+}
+
+// Dark/Light Mode
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  $('themeIcon').className = isLight ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+}
+function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.body.classList.add('light-mode');
+    $('themeIcon').className = 'fa-solid fa-sun';
+  }
+}
+initTheme();
 function openGlobalSettings() {requireMentor();closeModals();updateStats();$('globalSettingsModal').classList.remove('hidden');}
 function openReview(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;closeModals();$('reviewSubId').value=id;$('reviewScore').value=s.score??'';$('reviewStatus').value=s.status;$('reviewMajor').value=s.major||'';$('reviewMinor').value=s.minor||'';$('reviewModal').classList.remove('hidden');}
 
