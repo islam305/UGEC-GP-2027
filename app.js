@@ -107,7 +107,18 @@ function resetAuth() {
   document.querySelectorAll('.mentor-action').forEach(b=>b.classList.add('hidden'));
   status('تم تسجيل الخروج.');
 }
-async function logout() { await run(async()=>{const {error}=await db.auth.signOut();if(error) throw error;resetAuth();}); }
+async function logout() {
+  await run(async () => {
+    const { error } = await db.auth.signOut();
+
+    // لو الجلسة انتهت بالفعل، نكمل الخروج من الواجهة.
+    if (error && error.name !== 'AuthSessionMissingError') {
+      throw error;
+    }
+
+    resetAuth();
+  });
+}
 async function reloadData() {
   if(!profile || refreshing) return;
   refreshing=true;
@@ -427,15 +438,14 @@ function openAddTaskModal(id = null) {
 
 function openSubmitModal(id) {
   closeModals();
-  $('submitFile').value='';
+
   $('submitTaskId').value = id;
-  $('submitRev').value = '';
   $('submitFileName').value = '';
   $('submitFileLink').value = '';
   $('submitNotes').value = '';
+
   $('submitTaskModal').classList.remove('hidden');
 }
-
 
 function openAddTeamModal(id = null) {
   requireMentor();
