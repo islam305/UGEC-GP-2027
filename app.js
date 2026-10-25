@@ -97,9 +97,6 @@ async function establish(account,expectedRole) {
   $('mentorSettingsBtn').classList.toggle('hidden',!state.isMentor);
   $('legacyBackupPanel').classList.toggle('hidden',!state.isMentor);
   $('tabReviewsBtn').classList.toggle('hidden',!state.isMentor);
-  'hidden',
-  !state.isMentor && !state.currentUni
-);
   document.querySelectorAll('.mentor-action').forEach(b=>b.classList.toggle('hidden',!state.isMentor));
 }
 function resetAuth() {
@@ -293,34 +290,8 @@ function legacyReferenceText(record) {return Object.entries(record.legacyReferen
 function sessionCard(s) {const actions=[];if(s.videoLink) actions.push(button('مشاهدة الفيديو',()=>openFile(s,'videoLink')));if(state.isMentor)actions.push(button('تعديل',()=>openAddSessionModal(s.id)),button('رابط الفيديو',()=>openSessionVideoModal(s.id)),button('حذف',()=>deleteSession(s.id)));return card(s.title,[s.presenter||'',(s.date||'')+' '+(s.time||''),s.desc||'',legacyReferenceText(s)],actions);}
 function renderSessions() {list('sessionsList',state.sessions,sessionCard);}
 function renderInputs() {list('inputsList',state.inputs,i=>{const actions=[];if(i.link||i.storagePath)actions.push(button('تنزيل / فتح الملف',()=>openFile(i)));if(state.isMentor)actions.push(button('تعديل',()=>openAddInputModal(i.id)),button('حذف',()=>deleteInput(i.id)));return card(i.title+(i.ref?' • '+i.ref:''),[i.desc||'',i.fileName||'',legacyReferenceText(i)],actions);});}
-function renderReviews() {
-  list('reviewsList', state.isMentor ? state.submissions : [], s => {
-    const t = state.tasks.find(t => t.id === s.taskId);
-    const u = state.universities.find(u => u.id === s.uniId);
-
-    const actions = [
-      button('تقييم / تعديل التقييم', () => openReview(s.id))
-    ];
-
-    if (s.fileLink || s.storagePath) {
-      actions.push(
-        button('تنزيل التسليم', () => openFile(s, 'fileLink'))
-      );
-    }
-
-    return card(
-      (u?.name || s.uniId) + ' • ' + (t?.title || 'تاسك محذوف'),
-      [
-        'الإصدار: ' + s.rev + ' • ' + dateText(s.date),
-        'الملف: ' + (s.fileName || '-'),
-        s.notes || '',
-        legacyReferenceText(s),
-        statusText(s.status) + ' • الدرجة: ' + (s.score ?? '-')
-      ],
-      actions
-    );
-  });
-}function teamCard(u) {return card(u.name+' '+(u.group||''),['معرّف الفريق: '+u.id,'المشروع: '+(u.project||'-'),'الأعضاء:\n'+(u.members||'-'),'Project Coordinator: '+(u.coordinator||'-'),'Primary Engineer: '+(u.primaryEngineer||'-'),'Secondary Engineer: '+(u.secondaryEngineer||'-'),'الإنجاز: '+(u.progress||0)+'% • التقييم: '+(u.score||0)+'/100'],state.isMentor?[button('تعديل',()=>openAddTeamModal(u.id))]:[]);}
+function renderReviews() {list('reviewsList',state.isMentor?state.submissions:[],s=>{const t=state.tasks.find(t=>t.id===s.taskId);const u=state.universities.find(u=>u.id===s.uniId);const actions=[button('تقييم / تعديل التقييم',()=>openReview(s.id))];if(s.fileLink||s.storagePath)actions.push(button('تنزيل التسليم',()=>openFile(s,'fileLink')));return card((u?.name||s.uniId)+' • '+(t?.title||'تاسك محذوف'),['الإصدار: '+s.rev+' • '+dateText(s.date),'الملف: '+(s.fileName||'-'),s.notes||'',legacyReferenceText(s),statusText(s.status)+' • الدرجة: '+(s.score??'-')],actions);});}
+function teamCard(u) {return card(u.name+' '+(u.group||''),['معرّف الفريق: '+u.id,'المشروع: '+(u.project||'-'),'الأعضاء:\n'+(u.members||'-'),'Project Coordinator: '+(u.coordinator||'-'),'Primary Engineer: '+(u.primaryEngineer||'-'),'Secondary Engineer: '+(u.secondaryEngineer||'-'),'الإنجاز: '+(u.progress||0)+'% • التقييم: '+(u.score||0)+'/100'],state.isMentor?[button('تعديل',()=>openAddTeamModal(u.id))]:[]);}
 function renderTeams() {list('teamsList',state.universities,teamCard);}
 function average(id) {const scores=state.submissions.filter(s=>s.uniId===id&&s.score!==''&&s.score!=null).map(s=>Number(s.score));return scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;}
 function renderDashboard() {
