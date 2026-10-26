@@ -98,7 +98,7 @@ async function establish(account,expectedRole) {
   $('mentorSettingsBtn').classList.toggle('hidden',!state.isMentor);
   $('legacyBackupPanel').classList.toggle('hidden',!state.isMentor);
   $('tabReviewsBtn').classList.toggle('hidden',!state.isMentor);
-  document.querySelectorAll('.mentor-action').forEach(b=>b.classList.toggle('hidden',!state.isMentor));
+  document.querySelectorAll('.mentor-action').forEach(b=>b.classList.toggle('hidden',!state.isMentor));ugecOpenDeepLink();
 }
 function resetAuth() {
   user=null;profile=null;rows.clear();notificationStates.clear();notificationsReady=false;state=emptyState();closeModals();renderAll();
@@ -677,4 +677,128 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initQuranWidget);
 } else {
   initQuranWidget();
+}
+
+/* ==========================================
+   UGEC FCM Notification Deep Linking
+   ========================================== */
+
+const UGEC_DEEP_LINK_KINDS = {
+  tasks: {
+    tab: 'tasks',
+    list: 'tasksList'
+  },
+  sessions: {
+    tab: 'sessions',
+    list: 'sessionsList'
+  },
+  inputs: {
+    tab: 'inputs',
+    list: 'inputsList'
+  }
+};
+
+let ugecPendingDeepLink = null;
+
+function ugecReadDeepLink() {
+  const params = new URLSearchParams(window.location.search);
+  const kind = params.get('ugec_kind');
+  const id = params.get('ugec_id');
+
+  if (!Object.hasOwn(UGEC_DEEP_LINK_KINDS, kind)) return null;
+  if (!id || !/^[A-Za-z0-9_-]{1,100}$/.test(id)) return null;
+
+  return { kind, id };
+}
+
+function ugecClearDeepLink() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete('ugec_kind');
+  url.searchParams.delete('ugec_id');
+  window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+}
+
+function ugecHighlightCard(element) {
+  if (!element) return;
+
+  element.style.transition =
+    'outline 0.3s ease, box-shadow 0.3s ease';
+
+  element.style.outline = '3px solid #38bdf8';
+  element.style.outlineOffset = '4px';
+  element.style.boxShadow =
+    '0 0 25px rgba(56,189,248,0.35)';
+
+  element.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center'
+  });
+
+  setTimeout(() => {
+    element.style.outline = '';
+    element.style.outlineOffset = '';
+    element.style.boxShadow = '';
+  }, 7000);
+}
+
+function ugecOpenDeepLink() {
+  if (!ugecPendingDeepLink || !user || !profile) return;
+
+  const { kind, id } = ugecPendingDeepLink;
+  const config = UGEC_DEEP_LINK_KINDS[kind];
+
+  const records = state[kind] || [];
+  const visibleRecords = kind === 'inputs'
+    ? records.filter(canViewInput)
+    : kind === 'tasks'
+      ? records.slice().sort(
+          (a, b) => (a.createdAt || 0) - (b.createdAt || 0)
+        )
+      : records;
+
+  const index = visibleRecords.findIndex(item => item.id === id);
+
+  ugecPendingDeepLink = null;
+  ugecClearDeepLink();
+
+  if (index === -1) {
+    status('هذا المحتوى غير متاح لحسابك أو تم حذفه.', true);
+    return;
+  }
+
+  const tabButton = [...document.querySelectorAll('.tab-btn')]
+    .find(button => button.dataset.tab === config.tab);
+
+  if (tabButton) {
+    tabButton.click();
+  } else {
+    document.querySelectorAll('.tab-pane').forEach(
+      pane => pane.classList.add('hidden')
+    );
+
+    $('tab-' + config.tab)?.classList.remove('hidden');
+  }
+
+  requestAnimationFrame(() => {
+    const container = $(config.list);
+    const cards = container?.children || [];
+    ugecHighlightCard(cards[index]);
+  });
+}
+
+function ugecInitializeDeepLink() {
+  ugecPendingDeepLink = ugecReadDeepLink();
+
+  if (ugecPendingDeepLink && user && profile) {
+    ugecOpenDeepLink();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener(
+    'DOMContentLoaded',
+    ugecInitializeDeepLink
+  );
+} else {
+  ugecInitializeDeepLink();
 }
