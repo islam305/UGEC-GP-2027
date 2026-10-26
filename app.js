@@ -1,6 +1,7 @@
 'use strict';
 const STORAGE_KEY = 'UGEC_GP2027_PRO_V1';
 const BUCKET = 'ugec-files';
+const SUBMISSION_DRIVE_URL = 'https://drive.google.com/drive/folders/1d8E8v3C783sqa16S8G2MiASEzTlieHA-?usp=sharing';
 const kinds = ['teams','sessions','inputs','tasks','submissions','settings'];
 const fields = {
   teams: ['name','group','members','coordinator','primaryEngineer','secondaryEngineer','advisor','progress','score','project'],
@@ -205,9 +206,11 @@ function saveTask(e) {e.preventDefault();return run(async()=>{
 });}
 function submitTask(e) {e.preventDefault();return run(async()=>{
   if(profile?.role!=='team') throw Error('تسجيل دخول الفريق مطلوب.');
-  const fileLink=externalURL($('submitFileLink').value);
-  if(!fileLink) throw Error('أدخل رابط تسليم صالحًا.');
-  await commit('submissions',uid(),{taskId:$('submitTaskId').value,uniId:profile.team_id,rev:'Rev.01',fileName:$('submitFileName').value||'رابط تسليم الخارجية',fileLink,notes:$('submitNotes').value,status:'under_review',score:'',major:'',minor:'',date:new Date().toISOString()});
+  const fileName=$('submitFileName').value.trim();
+  if(!fileName) throw Error('اكتب اسم الملف الذي رفعته على Drive.');
+  if(!$('submitDriveConfirmed').checked) throw Error('ارفع الملف على Drive أولًا، ثم أكد اكتمال الرفع قبل تسجيل التسليم.');
+  const fileLink=externalURL($('submitFileLink').value)||SUBMISSION_DRIVE_URL;
+  await commit('submissions',uid(),{taskId:$('submitTaskId').value,uniId:profile.team_id,rev:'Rev.01',fileName,fileLink,notes:$('submitNotes').value,status:'under_review',score:'',major:'',minor:'',date:new Date().toISOString()});
 });}
 function saveReview(e) {e.preventDefault();return run(async()=>{
   requireMentor();const id=$('reviewSubId').value;const old=state.submissions.find(s=>s.id===id);if(!old) throw Error('التسليم غير موجود.');
@@ -442,6 +445,7 @@ function openSubmitModal(id) {
   $('submitTaskId').value = id;
   $('submitFileName').value = '';
   $('submitFileLink').value = '';
+  $('submitDriveConfirmed').checked = false;
   $('submitNotes').value = '';
 
   $('submitTaskModal').classList.remove('hidden');

@@ -1062,9 +1062,21 @@
       </div>
       <form onsubmit="submitTask(event)" class="space-y-3">
         <input type="hidden" id="submitTaskId">
-        <input id="submitFileName" class="ugec-input" placeholder="اسم الملف (مثال: SLD_Group1_Rev01.dwg)">
-        <input id="submitFileLink" type="url" class="ugec-input" placeholder="رابط الملف (Google Drive / OneDrive)" required>
+        <div class="rounded-xl border border-sky-500/40 bg-sky-500/10 p-4 space-y-3">
+          <div class="font-bold text-sm">رفع الملف على Google Drive</div>
+          <p id="submitDriveHelp" class="text-sm leading-relaxed">افتح فولدر التسليم وارفع ملفك باسم يتضمن الفريق والتاسك والإصدار. انتظر اكتمال الرفع، ثم ارجع للتبويب ده واضغط «رفع التسليم» لتسجيله على المنصة.</p>
+          <a id="submitDriveLink" href="https://drive.google.com/drive/folders/1d8E8v3C783sqa16S8G2MiASEzTlieHA-?usp=sharing" target="_blank" rel="noopener noreferrer" class="ugec-btn-primary w-full justify-center" aria-describedby="submitDriveHelp">فتح فولدر Drive ورفع الملف ↗</a>
+          <p class="text-xs text-slate-400">يفتح في تبويب جديد. الرجوع للمنصة يكون يدويًا بعد اكتمال الرفع.</p>
+        </div>
+        <label for="submitFileName" class="block text-sm font-bold">اسم الملف المرفوع على Drive</label>
+        <input id="submitFileName" class="ugec-input" placeholder="مثال: Cairo1_SLD_Rev01.dwg" required>
+        <label for="submitFileLink" class="block text-sm">رابط الملف المباشر (اختياري)</label>
+        <input id="submitFileLink" type="url" class="ugec-input" placeholder="اتركه فارغًا لاستخدام رابط فولدر التسليم">
         <textarea id="submitNotes" class="ugec-input h-24" placeholder="ملاحظات الفريق (اختياري)"></textarea>
+        <label class="flex items-start gap-2 text-sm leading-relaxed" for="submitDriveConfirmed">
+          <input id="submitDriveConfirmed" type="checkbox" required class="mt-1">
+          <span>أؤكد أنني رفعت الملف على Drive وانتظرت اكتمال الرفع.</span>
+        </label>
         <button class="ugec-btn-primary w-full justify-center">رفع التسليم</button>
       </form>
     </div>
