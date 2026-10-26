@@ -9,7 +9,7 @@ const fields = {
   inputs: ['legacyReferences','title','ref','desc','link','storagePath','fileName'],
   tasks: ['title','desc','deadline','format','createdAt'],
   submissions: ['legacyReferences','taskId','uniId','rev','fileName','fileLink','storagePath','notes','status','score','major','minor','date'],
-  settings: ['sessions','tasks','pending','progress']
+  settings: ['sessions','tasks','pending','progress','kemetTeamId']
 };
 let db, profile, user, busy = false, refreshing = false;
 let rows = new Map();
@@ -17,7 +17,7 @@ let notificationStates = new Map();
 let notificationsReady = false;
 let state = emptyState();
 function $(id) { return document.getElementById(id); }
-function emptyState() { return {isMentor:false,currentUni:null,universities:[],sessions:[],inputs:[],tasks:[],submissions:[],notifications:[],global:{sessions:0,tasks:0,pending:0,progress:0}}; }
+function emptyState() { return {isMentor:false,currentUni:null,universities:[],sessions:[],inputs:[],tasks:[],submissions:[],notifications:[],inputAccess:{kemetTeamId:''},global:{sessions:0,tasks:0,pending:0,progress:0}}; }
 function key(kind,id) { return kind+':'+id; }
 function uid() { return crypto.randomUUID(); }
 function clean(kind,data) {
@@ -135,7 +135,10 @@ async function reloadData() {
     nextState.isMentor=profile.role==='mentor';nextState.currentUni=profile.team_id;
     for(const row of next.values()) {
       const data={...clean(row.kind,row.data),id:row.id};
-      if(row.kind==='settings') {if(row.id==='global') nextState.global={...nextState.global,...data};}
+      if(row.kind==='settings') {
+        if(row.id==='global') nextState.global={...nextState.global,...data};
+        if(row.id==='input_access') nextState.inputAccess={kemetTeamId:data.kemetTeamId||''};
+      }
       else nextState[row.kind==='teams'?'universities':row.kind].push(data);
     }
     rows=next;state=nextState;await loadNotificationStates();renderAll();
@@ -303,7 +306,37 @@ function renderTasks() {list('tasksList',state.tasks.slice().sort((a,b)=>(a.crea
 function legacyReferenceText(record) {return Object.entries(record.legacyReferences||{}).filter(([field])=>!record[field]&&!record.storagePath).map(([,text])=>'مرجع قديم يحتاج رابطًا صالحًا أو إعادة رفع: '+text).join('\n');}
 function sessionCard(s) {const actions=[];if(s.videoLink) actions.push(button('مشاهدة الفيديو',()=>openFile(s,'videoLink')));if(state.isMentor)actions.push(button('تعديل',()=>openAddSessionModal(s.id)),button('رابط الفيديو',()=>openSessionVideoModal(s.id)),button('حذف',()=>deleteSession(s.id)));return card(s.title,[s.presenter||'',(s.date||'')+' '+(s.time||''),s.desc||'',legacyReferenceText(s)],actions);}
 function renderSessions() {list('sessionsList',state.sessions,sessionCard);}
-function renderInputs() {list('inputsList',state.inputs,i=>{const actions=[];if(i.link||i.storagePath)actions.push(button('تنزيل / فتح الملف',()=>openFile(i)));if(state.isMentor)actions.push(button('تعديل',()=>openAddInputModal(i.id)),button('حذف',()=>deleteInput(i.id)));return card(i.title+(i.ref?' • '+i.ref:''),[i.desc||'',i.fileName||'',legacyReferenceText(i)],actions);});}
+function isKemetInput(input) {return /kemet/i.test([input.title,input.fileName,input.ref].filter(x=>x!=null).join(' '));}
+function canViewInput(input) {
+  if(state.isMentor) return true;
+  const target=state.inputAccess.kemetTeamId;
+  if(!state.currentUni || !target) return false;
+  return isKemetInput(input)===(state.currentUni===target);
+}
+function renderInputs() {
+  const target=state.inputAccess.kemetTeamId;
+  $('inputAccessNotice').textContent=state.isMentor
+    ? (target?'ملفات KEMET خاصة بالمجموعة المحددة في الإعدادات؛ باقي الملفات لباقي الفرق.':'اختر مجموعة Cairo 2 لملفات KEMET من إعدادات المنصة لتفعيل عرض المدخلات للطلاب.')
+    : (!target?'جارٍ تجهيز تخصيص المدخلات الفنية بواسطة المشرف.':state.currentUni===target?'تظهر لك ملفات KEMET الخاصة بمجموعتك فقط.':'تظهر لك المدخلات الفنية الخاصة بمجموعتك، باستثناء ملفات KEMET.');
+  list('inputsList',state.inputs.filter(canViewInput),i=>{
+    const actions=[];
+    if(i.link||i.storagePath)actions.push(button('تنزيل / فتح الملف',()=>openFile(i)));
+    if(state.isMentor)actions.push(button('تعديل',()=>openAddInputModal(i.id)),button('حذف',()=>deleteInput(i.id)));
+    return card(i.title+(i.ref?' • '+i.ref:''),[i.desc||'',i.fileName||'',legacyReferenceText(i),...(state.isMentor?[isKemetInput(i)?'KEMET • للمجموعة المخصصة فقط':'لباقي الفرق • غير متاح لمجموعة KEMET']:[])],actions);
+  });
+}
+function fillInputAccessTeams() {
+  const select=$('kemetTeamSelect');select.replaceChildren();
+  const placeholder=node('option','اختر مجموعة Cairo 2');placeholder.value='';select.append(placeholder);
+  state.universities.forEach(team=>{const option=node('option',team.name+' '+(team.group||'')+' • '+team.id);option.value=team.id;select.append(option);});
+  select.value=state.inputAccess.kemetTeamId;
+}
+function saveInputAccess() {return run(async()=>{
+  requireMentor();
+  const kemetTeamId=$('kemetTeamSelect').value;
+  if(!state.universities.some(t=>t.id===kemetTeamId)) throw Error('اختر مجموعة Cairo 2 من القائمة أولًا.');
+  await commit('settings','input_access',{kemetTeamId});
+});}
 function renderReviews() {list('reviewsList',state.isMentor?state.submissions:[],s=>{const t=state.tasks.find(t=>t.id===s.taskId);const u=state.universities.find(u=>u.id===s.uniId);const actions=[button('تقييم / تعديل التقييم',()=>openReview(s.id))];if(s.fileLink||s.storagePath)actions.push(button('تنزيل التسليم',()=>openFile(s,'fileLink')));return card((u?.name||s.uniId)+' • '+(t?.title||'تاسك محذوف'),['الإصدار: '+s.rev+' • '+dateText(s.date),'الملف: '+(s.fileName||'-'),s.notes||'',legacyReferenceText(s),statusText(s.status)+' • الدرجة: '+(s.score??'-')],actions);});}
 function teamCard(u) {return card(u.name+' '+(u.group||''),['معرّف الفريق: '+u.id,'المشروع: '+(u.project||'-'),'الأعضاء:\n'+(u.members||'-'),'Project Coordinator: '+(u.coordinator||'-'),'Primary Engineer: '+(u.primaryEngineer||'-'),'Secondary Engineer: '+(u.secondaryEngineer||'-'),'الإنجاز: '+(u.progress||0)+'% • التقييم: '+(u.score||0)+'/100'],state.isMentor?[button('تعديل',()=>openAddTeamModal(u.id))]:[]);}
 function renderTeams() {list('teamsList',state.universities,teamCard);}
@@ -380,7 +413,7 @@ function initTheme() {
   }
 }
 initTheme();
-function openGlobalSettings() {requireMentor();closeModals();updateStats();$('globalSettingsModal').classList.remove('hidden');}
+function openGlobalSettings() {requireMentor();closeModals();updateStats();fillInputAccessTeams();$('globalSettingsModal').classList.remove('hidden');}
 function openReview(id) {const s=state.submissions.find(s=>s.id===id);if(!s)return;closeModals();$('reviewSubId').value=id;$('reviewScore').value=s.score??'';$('reviewStatus').value=s.status;$('reviewMajor').value=s.major||'';$('reviewMinor').value=s.minor||'';$('reviewModal').classList.remove('hidden');}
 
 function openAddSessionModal(id = null) {
@@ -491,7 +524,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 function notificationId(row) {return row.kind+':'+row.id+':'+row.version;}
 function currentNotifications() {
-  return [...rows.values()].filter(r=>['sessions','inputs','tasks','submissions'].includes(r.kind))
+  return [...rows.values()].filter(r=>['sessions','inputs','tasks','submissions'].includes(r.kind)&&(r.kind!=='inputs'||canViewInput(r.data)))
     .sort((a,b)=>b.updated_at.localeCompare(a.updated_at)||notificationId(a).localeCompare(notificationId(b)));
 }
 function visibleNotifications() {return currentNotifications().filter(r=>!notificationStates.get(notificationId(r))?.dismissed);}

@@ -879,6 +879,7 @@
             </div>
             <button class="hidden mentor-action" onclick="openAddInputModal()"><span class="ugec-chip amber"><i class="fa-solid fa-plus"></i> رفع مدخل فني</span></button>
           </div>
+          <p id="inputAccessNotice" class="text-sm text-slate-400 mb-4" role="status"></p>
           <div id="inputsList" class="space-y-2"></div>
         </div>
       </section>
@@ -1191,6 +1192,12 @@
           <input id="legacyImport" type="file" accept=".json,application/json" class="ugec-input">
           <button type="button" id="importLegacyBtn" class="ugec-chip" onclick="importLegacy()">استيراد البيانات القديمة</button>
           <button type="button" class="ugec-chip" onclick="exportCloud()">تنزيل نسخة من البيانات السحابية</button>
+        </div>
+        <div class="border-t border-slate-700 pt-3 space-y-2">
+          <label for="kemetTeamSelect" class="block font-bold text-sm">المجموعة المخصصة لملفات KEMET</label>
+          <p class="text-xs text-slate-400">اختر Cairo 2. ستشاهد هذه المجموعة ملفات KEMET فقط، وباقي الفرق ستشاهد الملفات الأخرى فقط. التصنيف حسب العنوان واسم الملف والمرجع، ولا يتأثر بحالة الحروف.</p>
+          <select id="kemetTeamSelect" class="ugec-input"></select>
+          <button type="button" class="ugec-chip" onclick="saveInputAccess()">حفظ تخصيص ملفات KEMET</button>
         </div>
         <button onclick="saveGlobalSettings()" class="ugec-btn-primary w-full justify-center">حفظ الإعدادات</button>
       </div>
