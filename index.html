@@ -595,6 +595,7 @@
   }
 </style>
   <link rel="stylesheet" href="ugec-celebrations.css">
+  <link rel="stylesheet" href="ugec-report-directory.css">
 </head>
 
 <body class="font-cairo bg-ugec-bg text-slate-100 antialiased">
@@ -818,9 +819,9 @@
         <button class="tab-btn" data-tab="sessions"><i class="fa-solid fa-chalkboard-user"></i> السيشنات والورش</button>
         <button class="tab-btn" data-tab="inputs"><i class="fa-solid fa-file-lines"></i> المدخلات الفنية</button>
         <button class="tab-btn" data-tab="tasks"><i class="fa-solid fa-list-check"></i> التاسكات</button>
-        <button class="tab-btn" data-tab="presentations"><i class="fa-solid fa-file-powerpoint"></i> العرض التقديمي للمشروع</button>
         <button class="tab-btn hidden" id="tabReviewsBtn" data-tab="reviews"><i class="fa-solid fa-magnifying-glass"></i> المراجعة والتقييم</button>
         <button class="tab-btn" data-tab="teams"><i class="fa-solid fa-users"></i> الفرق والجامعات</button>
+        <button class="tab-btn" data-tab="presentations"><i class="fa-solid fa-file-powerpoint"></i> العرض التقديمي للمشروع</button>
         <button class="tab-btn" data-tab="report"><i class="fa-solid fa-file-contract"></i> التقرير الشامل</button>
       </nav>
 
@@ -966,7 +967,7 @@
               <div class="font-bold">التقرير الشامل</div>
               <div class="text-xs text-slate-400">يظهر لكل فريق تقريره الخاص فقط حفاظاً على الخصوصية</div>
             </div>
-            <button onclick="window.print()"><span class="ugec-chip"><i class="fa-solid fa-print"></i> طباعة التقرير</span></button>
+            <button onclick="printComprehensiveReport()"><span class="ugec-chip"><i class="fa-solid fa-print"></i> طباعة التقرير</span></button>
           </div>
           <div id="reportContent" class="overflow-x-auto"></div>
         </div>
@@ -1296,6 +1297,7 @@
 <script src="ugec-reviews.js?v=2"></script>
 <script src="ugec-celebrations.js"></script>
 <script src="ugec-presentations.js"></script>
+<script src="ugec-report-directory.js"></script>
 </body>
 
 </html>

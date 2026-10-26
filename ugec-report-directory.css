@@ -1,0 +1,46 @@
+.ugec-private-team{overflow:hidden}
+.ugec-private-team-body{position:relative;margin-top:14px;min-height:160px}
+.ugec-private-team-blur{filter:blur(7px);user-select:none;pointer-events:none;opacity:.55;line-height:2.3;overflow:hidden}
+.ugec-private-team-lock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:700;text-align:center}
+.ugec-private-team-lock span:first-child{font-size:25px}
+.ugec-report-paper{background:#fff;color:#14263d;border:1px solid #dbe4ed;border-radius:18px;padding:28px;font-family:Cairo,Arial,sans-serif;line-height:1.7;text-align:right}
+.ugec-report-header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding-bottom:20px;border-bottom:4px solid #138e9a}
+.ugec-report-brand{font:bold 34px Arial,sans-serif;letter-spacing:2px;color:#12304e}
+.ugec-report-brand-sub{font:10px Arial,sans-serif;letter-spacing:1.7px;color:#526b82;margin-top:5px}
+.ugec-report-header h1{font-size:23px;line-height:1.6;margin:0;color:#12304e}
+.ugec-report-header p{font-size:12px;color:#577087;margin:5px 0 0}
+.ugec-report-meta{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:#526b82;font-size:11px;padding:13px 0}
+.ugec-report-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0 26px}
+.ugec-report-stats>div{background:#f0f7f9;border:1px solid #d6e8ed;border-top:3px solid #138e9a;border-radius:10px;text-align:center;padding:13px 8px}
+.ugec-report-stats strong{display:block;font:700 25px Arial,sans-serif;color:#12304e}
+.ugec-report-stats span{display:block;font-size:11px;color:#4b657b;margin-top:6px}
+.ugec-report-section{margin:22px 0}
+.ugec-report-section h2{font-size:15px;color:#12304e;border-right:4px solid #d0a24c;padding-right:10px;margin:0 0 12px}
+.ugec-report-table{border-collapse:collapse;table-layout:auto;width:100%;font-size:12px;color:#19324a;min-width:560px}
+.ugec-report-table th{background:#12304e;color:#fff;font-weight:700;padding:11px 10px;text-align:right;border:1px solid #28455e}
+.ugec-report-table td{padding:10px;border:1px solid #d7e2eb;vertical-align:top;overflow-wrap:anywhere}
+.ugec-report-table tbody tr:nth-child(even){background:#f0f6f8}
+.ugec-report-footer{border-top:1px solid #cbd9e4;padding-top:12px;margin-top:26px;font-size:10px;color:#61778a;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ugec-report-empty{font-size:12px;color:#61778a}
+#ugecPrintableReport{display:none}
+@media(max-width:640px){.ugec-report-paper{padding:16px}.ugec-report-header{align-items:flex-start;flex-direction:column;gap:12px}.ugec-report-header h1{font-size:19px}.ugec-report-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@page{size:A4 landscape;margin:12mm}
+@media print{
+ body.ugec-print-report{background:white!important;color:#14263d!important;margin:0!important;padding:0!important;overflow:visible!important}
+ body.ugec-print-report>*:not(#ugecPrintableReport){display:none!important}
+ body.ugec-print-report #ugecPrintableReport{display:block!important}
+ #ugecPrintableReport *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-shadow:none!important;text-shadow:none!important}
+ #ugecPrintableReport .ugec-report-paper{border:0!important;border-radius:0!important;padding:0!important;font-size:11px!important;background:white!important;color:#14263d!important}
+ #ugecPrintableReport .ugec-report-header{display:flex!important;flex-direction:row!important;break-inside:avoid}
+ #ugecPrintableReport .ugec-report-header h1{font-size:22px!important}
+ #ugecPrintableReport .ugec-report-stats{display:grid!important;grid-template-columns:repeat(4,1fr)!important;break-inside:avoid;margin:10px 0 18px}
+ #ugecPrintableReport .ugec-report-section{break-inside:auto}
+ #ugecPrintableReport h2{break-after:avoid}
+ #ugecPrintableReport .ugec-report-table{min-width:0!important;width:100%!important;font-size:10pt!important}
+ #ugecPrintableReport .ugec-report-table thead{display:table-header-group}
+ #ugecPrintableReport .ugec-report-table tr{break-inside:avoid;page-break-inside:avoid}
+ #ugecPrintableReport .ugec-report-table th{background:#12304e!important;color:white!important;padding:8px!important}
+ #ugecPrintableReport .ugec-report-table td{padding:7px!important;color:#19324a!important}
+ #ugecPrintableReport .ugec-report-table tbody tr:nth-child(even){background:#f0f6f8!important}
+ #ugecPrintableReport .ugec-report-footer{display:flex!important;break-inside:avoid}
+}
