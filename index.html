@@ -596,6 +596,42 @@
 </style>
   <link rel="stylesheet" href="ugec-celebrations.css">
   <link rel="stylesheet" href="ugec-report-directory.css">
+  <style>
+    #authGate .ug-entry-about-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      max-width: 100%;
+      margin: 0 0 24px;
+      padding: 11px 20px;
+      border: 1px solid rgba(221, 181, 91, .48);
+      border-radius: 12px;
+      background: rgba(56, 189, 248, .10);
+      color: #bae6fd;
+      font: 700 15px Cairo, sans-serif;
+      text-decoration: none;
+      transition: background .2s ease, border-color .2s ease;
+    }
+    #authGate .ug-entry-about-link:hover {
+      background: rgba(56, 189, 248, .18);
+      border-color: rgba(221, 181, 91, .78);
+      color: #e0f2fe;
+    }
+    #authGate .ug-entry-about-link:focus-visible {
+      outline: 2px solid #7dd3fc;
+      outline-offset: 4px;
+    }
+    #authGate .ug-entry-about-link svg {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+      color: #d6b66c;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #authGate .ug-entry-about-link { transition: none; }
+    }
+  </style>
 </head>
 
 <body class="font-cairo bg-ugec-bg text-slate-100 antialiased">
@@ -689,6 +725,13 @@
         تسليم المهام ومراجعتها، تساعدكم المنصة على تطوير أفكاركم،
         وتنظيم خطواتكم، وتحويل ما تعلّمتموه إلى مخرجات هندسية واضحة.
       </p>
+
+      <a class="ug-entry-about-link" href="https://ugec-eg.com/" target="_blank" rel="noopener noreferrer" aria-label="تعرّف على UGEC — الموقع الرسمي للشركة، يفتح في تبويب جديد">
+        <span>تعرّف على UGEC</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M14 3h7v7M21 3l-11 11M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/>
+        </svg>
+      </a>
 
       <div class="ug-entry-features">
 
