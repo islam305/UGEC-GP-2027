@@ -1,0 +1,27 @@
+.ugec-celebrating{overflow:hidden!important}
+.ugec-award-overlay{position:fixed;inset:0;z-index:10000;overflow:auto;display:grid;place-items:center;min-height:100dvh;padding:32px 18px;color:#fff;background:radial-gradient(ellipse at 50% 28%,#243956 0%,#101d33 40%,#050b17 85%);font-family:Cairo,sans-serif;isolation:isolate}
+.ugec-award-overlay *{box-sizing:border-box}
+.ugec-award-content{position:relative;z-index:1;text-align:center;width:min(100%,1000px);animation:ugec-award-in .7s ease-out}
+.ugec-award-brand{font-size:12px;letter-spacing:3px;color:#abbcd1;margin:0 0 14px}
+.ugec-award-trophy{font-size:clamp(48px,8vw,88px);filter:drop-shadow(0 0 30px #f4c76255);animation:ugec-award-float 2.5s ease-in-out infinite}
+.ugec-award-title{font-family:Arial,sans-serif;font-size:clamp(32px,8vw,108px);font-weight:900;line-height:1.15;letter-spacing:-.045em;margin:12px 0 20px;color:#ffe1a0;text-shadow:0 0 50px #f4c76250;overflow-wrap:anywhere}
+.ugec-award-team{font-size:clamp(20px,3.5vw,34px);font-weight:800;color:#74e5ed;margin:0 0 12px;overflow-wrap:anywhere}
+.ugec-award-message{font-size:clamp(14px,2vw,19px);line-height:1.8;margin:12px 0;color:#d9e4ef}
+.ugec-award-result{margin:24px auto;max-width:620px;border:1px solid #e8c36b60;border-radius:24px;padding:20px 28px;background:linear-gradient(135deg,#f2cd6b12,#ffffff05);box-shadow:0 20px 80px #0003}
+.ugec-award-caption{font-size:13px;color:#b7c7da;margin:0 0 8px}
+.ugec-award-task{font-size:clamp(19px,3.5vw,30px);line-height:1.5;margin:0;overflow-wrap:anywhere}
+.ugec-award-score{direction:ltr;color:#ffda83;font:bold clamp(26px,4vw,40px) Arial,sans-serif;margin:14px 0 0}
+.ugec-award-controls{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:24px}
+.ugec-award-controls button{cursor:pointer;border-radius:14px;padding:13px 28px;font:700 15px Cairo,sans-serif;transition:transform .2s}
+.ugec-award-enter{border:0;background:linear-gradient(110deg,#ffd978,#e9b94f);color:#172033;box-shadow:0 8px 30px #f0c65e25}
+.ugec-award-more{border:1px solid #ffffff40;background:#ffffff0c;color:#fff}
+.ugec-award-more[hidden]{display:none}
+.ugec-award-controls button:hover{transform:translateY(-2px)}
+.ugec-award-controls button:focus-visible{outline:3px solid #6ce8f5;outline-offset:5px}
+.ugec-award-count{color:#9baec7;font-size:12px;margin-top:16px}
+.ugec-award-confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.ugec-award-confetti i{position:absolute;left:var(--x);top:-10%;width:8px;height:16px;border-radius:2px;background:var(--color);animation:ugec-confetti-fall 4.5s linear infinite;animation-delay:var(--delay);opacity:.8}
+@keyframes ugec-award-in{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes ugec-award-float{50%{transform:translateY(-8px) rotate(4deg)}}
+@keyframes ugec-confetti-fall{to{transform:translate(36px,110dvh) rotate(var(--turn));opacity:0}}
+@media(prefers-reduced-motion:reduce){.ugec-award-content,.ugec-award-trophy,.ugec-award-confetti i{animation:none}.ugec-award-confetti{display:none}.ugec-award-controls button{transition:none}}
