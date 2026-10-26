@@ -645,6 +645,25 @@ html body.ugec-company-open{margin:0!important;padding:0!important;overflow:visi
 html body.ugec-company-open>*:not(#ugecCompanyView){display:none!important}
 #ugecCompanyView #ugec-company-articleTitle:focus{outline:none!important}
 </style>
+<style id="ugecApkDownloadStyle">
+  /* Compact app download button - login screen only */
+  #authGate .ug-entry-apk-download {
+    display:inline-flex; align-items:center; justify-content:center; gap:9px;
+    width:auto; max-width:100%; min-height:36px; margin:20px auto 0;
+    padding:6px 12px; border:1px solid rgba(231,181,75,.85);
+    border-radius:8px; background:rgba(2,24,49,.72);
+    color:#67d9ff; text-decoration:none; font:700 12px Cairo,sans-serif;
+    box-shadow:0 2px 10px rgba(0,0,0,.14);
+    transition:background .2s ease,transform .2s ease;
+  }
+  #authGate .ug-entry-apk-download:hover {background:rgba(8,51,81,.85);transform:translateY(-1px)}
+  #authGate .ug-entry-apk-download:focus-visible {outline:2px solid #7dd3fc;outline-offset:3px}
+  #authGate .ug-entry-apk-download .ug-apk-logo {width:55px;height:23px;object-fit:contain;flex-shrink:0}
+  #authGate .ug-entry-apk-download .ug-apk-divider {height:20px;width:1px;background:rgba(226,232,240,.5)}
+  #authGate .ug-entry-apk-download .ug-apk-label {white-space:nowrap}
+  #authGate .ug-entry-apk-download .fa-download {font-size:13px;color:#67d9ff}
+  @media (prefers-reduced-motion:reduce){#authGate .ug-entry-apk-download{transition:none}}
+</style>
 </head>
 
 <body class="font-cairo bg-ugec-bg text-slate-100 antialiased">
@@ -824,6 +843,17 @@ html body.ugec-company-open>*:not(#ugecCompanyView){display:none!important}
         </button>
 
       </div>
+
+      <!-- Public Android app download: available before sign-in -->
+      <a class="ug-entry-apk-download"
+         href="https://www.mediafire.com/file/q7jsj9z0vnetws0/UGEC+GP-2027.apk/file"
+         target="_blank" rel="noopener noreferrer"
+         aria-label="تحميل تطبيق UGEC للأندرويد من MediaFire">
+        <img src="3.png" alt="شعار UGEC" class="ug-apk-logo">
+        <span class="ug-apk-divider" aria-hidden="true"></span>
+        <span class="ug-apk-label">تحميل تطبيق UGEC</span>
+        <i class="fa-solid fa-download" aria-hidden="true"></i>
+      </a>
 
       <p class="ug-entry-access-note">
         <i class="fa-solid fa-lock" aria-hidden="true"></i>
