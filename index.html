@@ -818,6 +818,7 @@
         <button class="tab-btn" data-tab="sessions"><i class="fa-solid fa-chalkboard-user"></i> السيشنات والورش</button>
         <button class="tab-btn" data-tab="inputs"><i class="fa-solid fa-file-lines"></i> المدخلات الفنية</button>
         <button class="tab-btn" data-tab="tasks"><i class="fa-solid fa-list-check"></i> التاسكات</button>
+        <button class="tab-btn" data-tab="presentations"><i class="fa-solid fa-file-powerpoint"></i> العرض التقديمي للمشروع</button>
         <button class="tab-btn hidden" id="tabReviewsBtn" data-tab="reviews"><i class="fa-solid fa-magnifying-glass"></i> المراجعة والتقييم</button>
         <button class="tab-btn" data-tab="teams"><i class="fa-solid fa-users"></i> الفرق والجامعات</button>
         <button class="tab-btn" data-tab="report"><i class="fa-solid fa-file-contract"></i> التقرير الشامل</button>
@@ -896,6 +897,39 @@
             <button class="hidden mentor-action" onclick="openAddTaskModal()"><span class="ugec-chip amber"><i class="fa-solid fa-plus"></i> إضافة تاسك جديد</span></button>
           </div>
           <div id="tasksList" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- Project Presentation Upload -->
+      <section class="tab-pane hidden" id="tab-presentations">
+        <div class="ugec-card rounded-2xl p-5 space-y-4">
+          <div>
+            <div class="font-bold text-lg">العرض التقديمي لمشروع التخرج</div>
+            <p class="text-sm text-slate-400 mt-2">ارفع العرض على Google Drive، ثم ارجع للمنصة لتسجيل التسليم باسم فريقك.</p>
+          </div>
+          <form id="projectPresentationForm" onsubmit="submitProjectPresentation(event)" class="hidden space-y-3">
+            <div class="rounded-xl border border-sky-500/40 bg-sky-500/10 p-4 space-y-3">
+              <p id="projectPresentationDriveHelp" class="text-sm leading-relaxed">١. افتح فولدر العروض وارفع ملفك باسم يتضمن الجامعة والمجموعة والإصدار. ٢. انتظر اكتمال الرفع، ثم ارجع لهذا التبويب وسجّل التسليم.</p>
+              <a id="projectPresentationDriveLink" href="https://drive.google.com/drive/folders/17gkH9LvSss5zHnAsgzcQwh21coyCWvW3?usp=drive_link" target="_blank" rel="noopener noreferrer" class="ugec-btn-primary w-full justify-center" aria-describedby="projectPresentationDriveHelp">فتح Drive ورفع العرض التقديمي ↗</a>
+              <p class="text-xs text-slate-400">يفتح في تبويب جديد. الرجوع للمنصة بعد اكتمال الرفع يكون يدويًا.</p>
+            </div>
+            <label for="projectPresentationName" class="block text-sm font-bold">اسم ملف العرض المرفوع</label>
+            <input id="projectPresentationName" class="ugec-input" maxlength="250" required placeholder="مثال: Cairo2_Final_Presentation_Rev01.pptx">
+            <label for="projectPresentationURL" class="block text-sm">رابط ملف العرض المباشر (اختياري)</label>
+            <input id="projectPresentationURL" type="url" maxlength="2048" class="ugec-input" placeholder="اتركه فارغًا لاستخدام رابط فولدر العروض">
+            <label for="projectPresentationNotes" class="block text-sm">ملاحظات الفريق (اختياري)</label>
+            <textarea id="projectPresentationNotes" class="ugec-input h-24" maxlength="5000"></textarea>
+            <label for="projectPresentationConfirmed" class="flex items-start gap-2 text-sm leading-relaxed">
+              <input id="projectPresentationConfirmed" type="checkbox" required class="mt-1">
+              <span>أؤكد أنني رفعت العرض على Drive وانتظرت اكتمال الرفع.</span>
+            </label>
+            <button id="projectPresentationSubmitBtn" type="submit" class="ugec-btn-primary w-full justify-center">تسجيل رفع العرض التقديمي</button>
+          </form>
+          <p id="projectPresentationStatus" class="text-sm text-sky-300" role="status" aria-live="polite"></p>
+          <div class="border-t border-slate-700 pt-4">
+            <h2 id="projectPresentationListTitle" class="font-bold mb-3">تسليمات العرض التقديمي</h2>
+            <div id="projectPresentationsList" class="space-y-3"></div>
+          </div>
         </div>
       </section>
 
@@ -1261,6 +1295,7 @@
   <script src="app.js"></script>
 <script src="ugec-reviews.js?v=2"></script>
 <script src="ugec-celebrations.js"></script>
+<script src="ugec-presentations.js"></script>
 </body>
 
 </html>
