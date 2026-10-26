@@ -678,10 +678,7 @@ html body.ugec-company-open>*:not(#ugecCompanyView){display:none!important}
             <i class="fa-solid fa-gear"></i> إعدادات المنصة
           </span>
         </button>
-        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ugec-border bg-ugec-card text-xs">
-          <i class="fa-solid fa-shield-halved text-amber-400"></i>
-          <span id="activeRoleLabel">بوابة الجامعات</span>
-        </div>
+        <span id="activeRoleLabel" hidden aria-hidden="true"></span>
         <button id="refreshBtn" class="hidden ugec-chip" onclick="refreshData()">تحديث البيانات</button>
         <button onclick="logout()" class="hidden" id="logoutBtn">
           <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ugec-border text-slate-300 text-xs hover:text-white transition">
